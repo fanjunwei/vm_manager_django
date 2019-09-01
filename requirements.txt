@@ -4,3 +4,4 @@ libvirt-python==5.6.0
 futures
 six
 pyyaml
+django-rest-swagger>=2.1.2
