@@ -6,8 +6,11 @@ from xml.etree import ElementTree as ET
 import libvirt
 from django.conf import settings
 # Create your views here.
+from rest_framework import exceptions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from common.utils import create_immediate_task
 
 status_map = {
     0: "no state",
@@ -51,8 +54,52 @@ class DomainsView(APIView):
         return Response(data=result)
 
 
+class DomainsXmlView(APIView):
+    def get(self, request, *args, **kwargs):
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            uuid = self.kwargs.get("uuid")
+            try:
+                domain = conn.lookupByUUIDString(uuid)
+            except libvirt.libvirtError:
+                raise exceptions.ValidationError("不存在此虚拟机")
+            vmXml = domain.XMLDesc(0)
+        return Response(data={"xml": vmXml})
+
+
+def domain_action(uuid, action):
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(uuid)
+        except libvirt.libvirtError:
+            return
+        if action == 'shutdown':
+            domain.shutdown()
+        elif action == 'destroy':
+            domain.destroy()
+        elif action == 'delete':
+            domain.undefine()
+        elif action == 'reboot':
+            domain.reboot()
+        elif action == 'start':
+            domain.create()
+
+
+class ActionDomainsView(APIView):
+    def post(self, request, *args, **kwargs):
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            uuid = self.kwargs.get("uuid")
+            try:
+                conn.lookupByUUIDString(uuid)
+            except libvirt.libvirtError:
+                raise exceptions.ValidationError("不存在此虚拟机")
+            action = self.request.data.get("action")
+        create_immediate_task(func=domain_action, args=(uuid, action))
+
+        return Response()
+
+
 class OverviewView(APIView):
-    def get(self, request, format=None):
+    def get(self, request, *args, **kwargs):
         vm_count = 0
         total_cpu = 0
         total_mem = 0

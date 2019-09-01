@@ -52,7 +52,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -128,6 +128,9 @@ REST_FRAMEWORK = {
         'common.filters.OrderingFilter',  # ordering=account,-username
         'common.filters.SearchFilter',  # ?search=xxx
     ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'common.authentication.CsrfExemptSessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
         # 'rest_framework.permissions.AllowAny',
