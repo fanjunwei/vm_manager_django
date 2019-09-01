@@ -104,7 +104,7 @@ class DomainsView(APIView):
             cpu = self.request.data.get("cpu")
             disk_name = self.request.data.get("disk_name")
             res = new_define(name=name, memory=memory, cpu=cpu, disk_name=disk_name)
-        #     conn.defineXML(res)
+            conn.defineXML(res)
         return Response(data={"xml": res})
 
 
