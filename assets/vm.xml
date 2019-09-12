@@ -31,7 +31,7 @@
 
         <disk type='file' device='disk'>
             <driver name='qemu' type='qcow2'/>
-            <source file='/home2/ms_vm/cloud_dep_mon/disk.qcow2'/>
+            <source file='disk.qcow2'/>
             <target dev='vda' bus='virtio'/>
             <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
         </disk>

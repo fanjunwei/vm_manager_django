@@ -36,7 +36,8 @@ def new_define(name, memory, cpu, disk_name):
 
     memory = str(memory)
     cpu = str(cpu)
-    with open("assets/vm.xml", 'r') as f:
+    xml_path = os.path.join(settings.BASE_DIR, 'assets/vm.xml')
+    with open(xml_path, 'r') as f:
         root = ET.fromstring(f.read())
         root.find("./uuid").text = str(uuid.uuid4())
         root.find("./name").text = name
@@ -138,6 +139,42 @@ def domain_action(uuid, action):
             domain.create()
 
 
+def attach_disk(uuid, size):
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(uuid)
+        except libvirt.libvirtError:
+            return
+        name = domain.name()
+        vm_data_dir = os.path.join(settings.VM_DATA_DIR, name)
+        if not os.path.exists(vm_data_dir):
+            os.makedirs(vm_data_dir)
+        for i in range(100):
+            disk_path = os.path.join(vm_data_dir, "disk{}.qcow2".format(i))
+            if not os.path.exists(disk_path):
+                break
+        os.system("qemu-img create -f qcow2 '{}' {}G".format(disk_path, size))
+        xml_path = os.path.join(settings.BASE_DIR, 'assets/disk.xml')
+        vmXml = domain.XMLDesc(0)
+        vm_xml_root = ET.fromstring(vmXml)
+        disks = vm_xml_root.findall("./devices/disk")
+        devs = []
+        for disk in disks:
+            devs.append(disk.find("./target").attrib['dev'])
+
+        for i in range(26):
+            new_dev = "vd{}".format(chr(0x61 + i))
+            if new_dev not in devs:
+                break
+
+        with open(xml_path, 'r') as f:
+            root = ET.fromstring(f.read())
+            root.find("./source").attrib['file'] = disk_path
+            root.find("./target").attrib['dev'] = new_dev
+
+        domain.attachDevice(ET.tostring(root))
+
+
 class ActionDomainsView(APIView):
     def post(self, request, *args, **kwargs):
         with libvirt.open(settings.LIBVIRT_URI) as conn:
@@ -189,3 +226,23 @@ class BaseDisksView(APIView):
         return Response(data={
             "files": files
         })
+
+
+class AttachDiskView(APIView):
+    def post(self, request, *args, **kwargs):
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            uuid = self.kwargs.get("uuid")
+            size = self.request.data.get("size")
+            try:
+                size = float(size)
+            except:
+                raise exceptions.ValidationError("size应为数字")
+            if size < 0:
+                raise exceptions.ValidationError("size应为大于0的数字")
+            try:
+                conn.lookupByUUIDString(uuid)
+            except libvirt.libvirtError:
+                raise exceptions.ValidationError("不存在此虚拟机")
+        create_immediate_task(func=attach_disk, args=(uuid, size))
+
+        return Response()
