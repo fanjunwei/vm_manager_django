@@ -79,6 +79,10 @@ class DomainsView(APIView):
                         port = ""
                 else:
                     port = ""
+                disks = root.findall("./devices/disk")
+                devs = []
+                for disk in disks:
+                    devs.append(disk.find("./target").attrib['dev'])
                 info = domain.info()
                 item = {
                     "uuid": domain.UUIDString(),
@@ -87,6 +91,7 @@ class DomainsView(APIView):
                     "mem_kb": info[1],
                     "cpu": info[3],
                     "vnc_port": port,
+                    "disk_dev": devs,
                 }
                 result.append(item)
         return Response(data=result)
