@@ -20,7 +20,7 @@ urlpatterns = [
     url(r'^domains/$', views.DomainsView.as_view()),
     url(r'^domains/(?P<uuid>[\w\-]+)/action/$', views.ActionDomainsView.as_view()),
     url(r'^domains/(?P<uuid>[\w\-]+)/xml/$', views.DomainsXmlView.as_view()),
+    url(r'^domains/(?P<uuid>[\w\-]+)/attach_disk/$', views.AttachDiskView.as_view()),
     url(r'^overview/$', views.OverviewView.as_view()),
     url(r'^base_disks/$', views.BaseDisksView.as_view()),
-    url(r'^attach_disk/$', views.AttachDiskView.as_view()),
 ]
