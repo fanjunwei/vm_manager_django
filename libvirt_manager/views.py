@@ -185,7 +185,7 @@ def attach_disk(uuid, size):
             domain.attachDevice(ET.tostring(disk_node))
         try:
             vmXml.find("./devices").append(disk_node)
-            conn.defineXML(vmXml)
+            conn.defineXML(ET.tostring(vmXml))
         except Exception as ex:
             print str(ex)
 
