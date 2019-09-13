@@ -183,8 +183,12 @@ def attach_disk(uuid, size):
 
         if state == 1:
             domain.attachDevice(ET.tostring(disk_node))
-        vmXml.find("./devices").append(disk_node)
-        conn.defineXML(vmXml)
+        try:
+            vmXml.find("./devices").append(disk_node)
+            conn.defineXML(vmXml)
+        except Exception as ex:
+            print str(ex)
+
 
 
 class ActionDomainsView(APIView):
