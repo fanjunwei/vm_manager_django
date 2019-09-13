@@ -164,9 +164,9 @@ def attach_disk(uuid, size):
         xml_path = os.path.join(settings.BASE_DIR, 'assets/disk.xml')
         info = domain.info()
         state = info[0]
-        vmXml = domain.XMLDesc(0)
-        vm_xml_root = ET.fromstring(vmXml)
-        disks = vm_xml_root.findall("./devices/disk")
+        vm_xml_str = domain.XMLDesc(0)
+        vm_root = ET.fromstring(vm_xml_str)
+        disks = vm_root.findall("./devices/disk")
         devs = []
         for disk in disks:
             devs.append(disk.find("./target").attrib['dev'])
@@ -183,11 +183,10 @@ def attach_disk(uuid, size):
 
         if state == 1:
             domain.attachDevice(ET.tostring(disk_node))
-        try:
-            vm_xml_root.find("./devices").append(disk_node)
-            conn.defineXML(ET.tostring(vm_xml_root))
-        except Exception as ex:
-            print str(ex)
+
+        vm_root.find("./devices").append(disk_node)
+        conn.defineXML(ET.tostring(vm_root))
+
 
 
 
