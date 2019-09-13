@@ -238,6 +238,29 @@ def attach_disk(uuid, size):
         conn.defineXML(ET.tostring(vm_root))
 
 
+def detach_disk(uuid, dev):
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(uuid)
+        except libvirt.libvirtError:
+            return
+        info = domain.info()
+        state = info[0]
+        vm_root = ET.fromstring(domain.XMLDesc(0))
+        disks = vm_root.findall("./devices/disk")
+        devices_node = vm_root.find('./devices')
+        find_disk = None
+        for disk in disks:
+            if disk.find('./target').get("dev") == dev:
+                find_disk = disk
+                break
+        if find_disk:
+            if state == 1:
+                domain.detachDevice(ET.tostring(find_disk))
+            devices_node.remove(find_disk)
+            conn.defineXML(ET.tostring(vm_root))
+
+
 class ActionDomainsView(APIView):
     def post(self, request, *args, **kwargs):
         with libvirt.open(settings.LIBVIRT_URI) as conn:
@@ -322,5 +345,19 @@ class AttachDiskView(APIView):
             except libvirt.libvirtError:
                 raise exceptions.ValidationError("不存在此虚拟机")
         create_immediate_task(func=attach_disk, args=(uuid, size))
+
+        return Response()
+
+
+class DetachDiskView(APIView):
+    def post(self, request, *args, **kwargs):
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            uuid = self.kwargs.get("uuid")
+            dev = self.request.data.get("dev")
+            try:
+                conn.lookupByUUIDString(uuid)
+            except libvirt.libvirtError:
+                raise exceptions.ValidationError("不存在此虚拟机")
+        create_immediate_task(func=detach_disk, args=(uuid, dev))
 
         return Response()
