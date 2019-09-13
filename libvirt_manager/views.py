@@ -159,6 +159,20 @@ class DomainsXmlView(APIView):
             vmXml = domain.XMLDesc(0)
         return Response(data={"xml": vmXml})
 
+    def put(self, request, *args, **kwargs):
+        xml = self.request.data.get("xml")
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            uuid = self.kwargs.get("uuid")
+            vm_root = ET.fromstring(xml)
+            new_uuid = vm_root.find('./uuid').text
+            if uuid != new_uuid:
+                raise exceptions.ValidationError("uuid 禁止修改")
+            try:
+                conn.defineXML(xml)
+            except Exception as ex:
+                raise exceptions.ValidationError(str(ex))
+        return Response()
+
 
 def domain_action(uuid, action):
     with libvirt.open(settings.LIBVIRT_URI) as conn:
