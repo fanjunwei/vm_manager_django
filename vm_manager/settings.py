@@ -140,6 +140,7 @@ REST_FRAMEWORK = {
 # **********************************************************
 # **                   自定义配置                          **
 # **********************************************************
-LIBVIRT_URI = 'qemu+ssh://root@192.168.17.30/system?socket=/var/run/libvirt/libvirt-sock'
-VM_BASE_DISKS_DIR = '/Users/fanjunwei/Documents/workspace/vm_manager/assets'
-VM_DATA_DIR = '/Users/fanjunwei/Documents/workspace/vm_manager/data'
+LIBVIRT_URI = ''
+VM_BASE_DISKS_DIR = ''
+VM_ISO_DIR = ''
+VM_DATA_DIR = ''

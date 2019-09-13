@@ -26,28 +26,48 @@ def new_mac():
     return "{}:{}".format(base, res)
 
 
-def new_define(name, memory, cpu, disk_name):
+def new_define(name, memory, cpu, disk_name, is_from_iso, iso_name, disk_size):
     mac = new_mac()
-    disk_dir = os.path.join(settings.VM_DATA_DIR, name)
-    if not os.path.exists(disk_dir):
-        os.makedirs(disk_dir)
-    disk_path = os.path.join(disk_dir, disk_name)
-    shutil.copyfile(os.path.join(settings.VM_BASE_DISKS_DIR, disk_name), disk_path)
+    vm_data_dir = os.path.join(settings.VM_DATA_DIR, name)
+    if not os.path.exists(vm_data_dir):
+        os.makedirs(vm_data_dir)
+    if not is_from_iso:
+        disk_path = os.path.join(vm_data_dir, disk_name)
+        shutil.copyfile(os.path.join(settings.VM_BASE_DISKS_DIR, disk_name), disk_path)
+    else:
+        disk_path = ""
+        for i in range(100):
+            disk_path = os.path.join(vm_data_dir, "root_disk{}.qcow2".format(i))
+            if not os.path.exists(disk_path):
+                break
+        os.system("qemu-img create -f qcow2 '{}' {}G".format(disk_path, disk_size))
 
     memory = str(memory)
     cpu = str(cpu)
-    xml_path = os.path.join(settings.BASE_DIR, 'assets/vm.xml')
-    with open(xml_path, 'r') as f:
-        root = ET.fromstring(f.read())
-        root.find("./uuid").text = str(uuid.uuid4())
-        root.find("./name").text = name
-        root.find("./memory").text = memory
-        root.find("./currentMemory").text = memory
-        root.find("./vcpu").text = cpu
-        root.find("./devices/disk/source").attrib['file'] = disk_path
-        root.find("./devices/interface/mac").attrib['address'] = mac
+    vm_xml_path = os.path.join(settings.BASE_DIR, 'assets/vm.xml')
+    disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/disk.xml')
+    iso_disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/ios_disk.xml')
+    with open(disk_xml_path, 'r') as f:
+        disk_root = ET.fromstring(f.read())
+        disk_root.find("./source").attrib['file'] = disk_path
+    if is_from_iso:
+        with open(iso_disk_xml_path, 'r') as f:
+            iso_disk_root = ET.fromstring(f.read())
+            iso_disk_root.find("./source").attrib['file'] = os.path.join(settings.VM_ISO_DIR, iso_name)
 
-    return ET.tostring(root)
+    with open(vm_xml_path, 'r') as f:
+        vm_root = ET.fromstring(f.read())
+        vm_root.find("./uuid").text = str(uuid.uuid4())
+        vm_root.find("./name").text = name
+        vm_root.find("./memory").text = memory
+        vm_root.find("./currentMemory").text = memory
+        vm_root.find("./vcpu").text = cpu
+        vm_root.find("./devices").append(disk_root)
+        if is_from_iso:
+            vm_root.find("./devices").append(iso_disk_root)
+        vm_root.find("./devices/interface/mac").attrib['address'] = mac
+
+    return ET.tostring(vm_root)
 
 
 status_map = {
@@ -111,7 +131,18 @@ class DomainsView(APIView):
             memory = self.request.data.get("memory")
             cpu = self.request.data.get("cpu")
             disk_name = self.request.data.get("disk_name")
-            res = new_define(name=name, memory=memory, cpu=cpu, disk_name=disk_name)
+            is_from_iso = self.request.data.get("is_from_iso")
+            iso_name = self.request.data.get("iso_name")
+            disk_size = self.request.data.get("disk_size")
+            if disk_size:
+                try:
+                    disk_size = float(disk_size)
+                except:
+                    raise exceptions.ValidationError('disk_size 应为数字')
+                if disk_size < 0:
+                    raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
+            res = new_define(name=name, memory=memory, cpu=cpu, disk_name=disk_name, is_from_iso=is_from_iso,
+                             iso_name=iso_name, disk_size=disk_size)
             conn.defineXML(res)
         return Response(data={"xml": res})
 
@@ -188,8 +219,6 @@ def attach_disk(uuid, size):
         conn.defineXML(ET.tostring(vm_root))
 
 
-
-
 class ActionDomainsView(APIView):
     def post(self, request, *args, **kwargs):
         with libvirt.open(settings.LIBVIRT_URI) as conn:
@@ -231,6 +260,21 @@ class OverviewView(APIView):
 class BaseDisksView(APIView):
     def get(self, request, *args, **kwargs):
         path = settings.VM_BASE_DISKS_DIR
+
+        files = []
+
+        for n in os.listdir(path):
+            if os.path.isfile(os.path.join(path, n)):
+                files.append(n)
+
+        return Response(data={
+            "files": files
+        })
+
+
+class IsoView(APIView):
+    def get(self, request, *args, **kwargs):
+        path = settings.VM_ISO_DIR
 
         files = []
 

@@ -23,4 +23,5 @@ urlpatterns = [
     url(r'^domains/(?P<uuid>[\w\-]+)/attach_disk/$', views.AttachDiskView.as_view()),
     url(r'^overview/$', views.OverviewView.as_view()),
     url(r'^base_disks/$', views.BaseDisksView.as_view()),
+    url(r'^iso/$', views.IsoView.as_view()),
 ]
