@@ -1,7 +1,7 @@
 <domain type='kvm'>
     <name>cloud_dep_mon</name>
     <uuid>9f0a9077-406e-4d93-a9b7-ddefed3e8c6a</uuid>
-    <description>None</description>
+    <description></description>
     <memory unit='GiB'>16</memory>
     <currentMemory unit='GiB'>16</currentMemory>
 
