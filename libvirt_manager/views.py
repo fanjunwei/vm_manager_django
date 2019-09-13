@@ -370,6 +370,8 @@ class DetachDiskView(APIView):
                     break
             if find_disk:
                 if state == 1:
+                    if find_disk.get('device') == 'cdrom':
+                        raise exceptions.ValidationError("卸载光盘镜像需要关闭虚拟机")
                     domain.detachDevice(ET.tostring(find_disk))
                 devices_node.remove(find_disk)
                 conn.defineXML(ET.tostring(vm_root))
