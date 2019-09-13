@@ -102,9 +102,10 @@ class DomainsView(APIView):
                 disks_xml = root.findall("./devices/disk")
                 disks = []
                 for xml_node in disks_xml:
+                    device = xml_node.attrib['device']
                     dev = xml_node.find("./target").attrib['dev']
                     file_name = xml_node.find("./source").attrib['file']
-                    disks.append({"dev": dev, 'file': file_name})
+                    disks.append({"dev": dev, 'file': file_name, 'device': device})
                 info = domain.info()
                 item = {
                     "uuid": domain.UUIDString(),
