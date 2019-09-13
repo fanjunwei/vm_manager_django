@@ -355,9 +355,23 @@ class DetachDiskView(APIView):
             uuid = self.kwargs.get("uuid")
             dev = self.request.data.get("dev")
             try:
-                conn.lookupByUUIDString(uuid)
+                domain = conn.lookupByUUIDString(uuid)
             except libvirt.libvirtError:
                 raise exceptions.ValidationError("不存在此虚拟机")
-        create_immediate_task(func=detach_disk, args=(uuid, dev))
+            info = domain.info()
+            state = info[0]
+            vm_root = ET.fromstring(domain.XMLDesc(0))
+            disks = vm_root.findall("./devices/disk")
+            devices_node = vm_root.find('./devices')
+            find_disk = None
+            for disk in disks:
+                if disk.find('./target').get("dev") == dev:
+                    find_disk = disk
+                    break
+            if find_disk:
+                if state == 1:
+                    domain.detachDevice(ET.tostring(find_disk))
+                devices_node.remove(find_disk)
+                conn.defineXML(ET.tostring(vm_root))
 
         return Response()
