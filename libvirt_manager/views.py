@@ -162,6 +162,8 @@ def attach_disk(uuid, size):
                 break
         os.system("qemu-img create -f qcow2 '{}' {}G".format(disk_path, size))
         xml_path = os.path.join(settings.BASE_DIR, 'assets/disk.xml')
+        info = domain.info()
+        state = info[0]
         vmXml = domain.XMLDesc(0)
         vm_xml_root = ET.fromstring(vmXml)
         disks = vm_xml_root.findall("./devices/disk")
@@ -175,11 +177,14 @@ def attach_disk(uuid, size):
                 break
 
         with open(xml_path, 'r') as f:
-            root = ET.fromstring(f.read())
-            root.find("./source").attrib['file'] = disk_path
-            root.find("./target").attrib['dev'] = new_dev
+            disk_node = ET.fromstring(f.read())
+            disk_node.find("./source").attrib['file'] = disk_path
+            disk_node.find("./target").attrib['dev'] = new_dev
 
-        domain.attachDevice(ET.tostring(root))
+        if state == 1:
+            domain.attachDevice(ET.tostring(disk_node))
+        vmXml.find("./devices").append(disk_node)
+        conn.defineXML(vmXml)
 
 
 class ActionDomainsView(APIView):
