@@ -26,7 +26,7 @@ def new_mac():
     return "{}:{}".format(base, res)
 
 
-def new_define(name, memory, cpu, disk_name, is_from_iso, iso_name, disk_size):
+def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_name, disk_size):
     mac = new_mac()
     vm_data_dir = os.path.join(settings.VM_DATA_DIR, name)
     if not os.path.exists(vm_data_dir):
@@ -59,6 +59,7 @@ def new_define(name, memory, cpu, disk_name, is_from_iso, iso_name, disk_size):
         vm_root = ET.fromstring(f.read())
         vm_root.find("./uuid").text = str(uuid.uuid4())
         vm_root.find("./name").text = name
+        vm_root.find("./description").text = description
         vm_root.find("./memory").text = memory
         vm_root.find("./currentMemory").text = memory
         vm_root.find("./vcpu").text = cpu
@@ -91,8 +92,8 @@ class DomainsView(APIView):
             for domain in domains:
                 vmXml = domain.XMLDesc(0)
                 root = ET.fromstring(vmXml)
-                graphics = root.find('./devices/graphics')
-                port = graphics.get('port')
+                port = root.find('./devices/graphics').get('port')
+                description = root.find('./description').text
                 if port:
                     port = int(port)
                     if port < 0:
@@ -109,6 +110,7 @@ class DomainsView(APIView):
                 info = domain.info()
                 item = {
                     "uuid": domain.UUIDString(),
+                    "description": description,
                     "name": domain.name(),
                     "state": status_map[info[0]],
                     "mem_kb": info[1],
@@ -129,6 +131,7 @@ class DomainsView(APIView):
                 pass
             else:
                 raise exceptions.ValidationError("名称已存在")
+            description = self.request.data.get("description")
             memory = self.request.data.get("memory")
             cpu = self.request.data.get("cpu")
             disk_name = self.request.data.get("disk_name")
@@ -142,7 +145,8 @@ class DomainsView(APIView):
                     raise exceptions.ValidationError('disk_size 应为数字')
                 if disk_size < 0:
                     raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
-            res = new_define(name=name, memory=memory, cpu=cpu, disk_name=disk_name, is_from_iso=is_from_iso,
+            res = new_define(name=name, description=description, memory=memory, cpu=cpu, disk_name=disk_name,
+                             is_from_iso=is_from_iso,
                              iso_name=iso_name, disk_size=disk_size)
             conn.defineXML(res)
         return Response(data={"xml": res})
