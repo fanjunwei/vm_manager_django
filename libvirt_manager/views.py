@@ -94,7 +94,7 @@ class DomainsView(APIView):
                 root = ET.fromstring(vmXml)
                 port = root.find('./devices/graphics').get('port')
                 description = root.find('./description')
-                if description:
+                if description is not None:
                     description = description.text
                 else:
                     description = ""
