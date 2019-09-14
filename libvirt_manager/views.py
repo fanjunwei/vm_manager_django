@@ -188,11 +188,17 @@ def domain_action(uuid, action):
             domain = conn.lookupByUUIDString(uuid)
         except libvirt.libvirtError:
             return
+        info = domain.info()
+        state = info[0]
         if action == 'shutdown':
-            domain.shutdown()
+            if state == 1:
+                domain.shutdown()
         elif action == 'destroy':
-            domain.destroy()
+            if state != 5:
+                domain.destroy()
         elif action == 'delete':
+            if state == 1:
+                domain.destroy()
             domain.undefine()
         elif action == 'reboot':
             domain.reboot()
