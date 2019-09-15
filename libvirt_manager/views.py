@@ -56,6 +56,7 @@ def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_names
             with open(iso_disk_xml_path, 'r') as f:
                 iso_disk_root = ET.fromstring(f.read())
                 iso_disk_root.find("./source").attrib['file'] = os.path.join(settings.VM_ISO_DIR, i)
+                iso_disk_root_list.append(iso_disk_root)
 
     with open(vm_xml_path, 'r') as f:
         vm_root = ET.fromstring(f.read())
