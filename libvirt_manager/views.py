@@ -26,7 +26,7 @@ def new_mac():
     return "{}:{}".format(base, res)
 
 
-def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_name, disk_size):
+def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_names, disk_size):
     mac = new_mac()
     vm_data_dir = os.path.join(settings.VM_DATA_DIR, name)
     if not os.path.exists(vm_data_dir):
@@ -51,9 +51,11 @@ def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_name,
         disk_root = ET.fromstring(f.read())
         disk_root.find("./source").attrib['file'] = disk_path
     if is_from_iso:
-        with open(iso_disk_xml_path, 'r') as f:
-            iso_disk_root = ET.fromstring(f.read())
-            iso_disk_root.find("./source").attrib['file'] = os.path.join(settings.VM_ISO_DIR, iso_name)
+        iso_disk_root_list = []
+        for i in iso_names:
+            with open(iso_disk_xml_path, 'r') as f:
+                iso_disk_root = ET.fromstring(f.read())
+                iso_disk_root.find("./source").attrib['file'] = os.path.join(settings.VM_ISO_DIR, i)
 
     with open(vm_xml_path, 'r') as f:
         vm_root = ET.fromstring(f.read())
@@ -65,7 +67,8 @@ def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_name,
         vm_root.find("./vcpu").text = cpu
         vm_root.find("./devices").append(disk_root)
         if is_from_iso:
-            vm_root.find("./devices").append(iso_disk_root)
+            for i in iso_disk_root_list:
+                vm_root.find("./devices").append(i)
         vm_root.find("./devices/interface/mac").attrib['address'] = mac
 
     return ET.tostring(vm_root)
@@ -140,7 +143,7 @@ class DomainsView(APIView):
             cpu = self.request.data.get("cpu")
             disk_name = self.request.data.get("disk_name")
             is_from_iso = self.request.data.get("is_from_iso")
-            iso_name = self.request.data.get("iso_name")
+            iso_names = self.request.data.get("iso_names")
             disk_size = self.request.data.get("disk_size")
             if disk_size:
                 try:
@@ -151,7 +154,7 @@ class DomainsView(APIView):
                     raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
             res = new_define(name=name, description=description, memory=memory, cpu=cpu, disk_name=disk_name,
                              is_from_iso=is_from_iso,
-                             iso_name=iso_name, disk_size=disk_size)
+                             iso_names=iso_names, disk_size=disk_size)
             conn.defineXML(res)
         return Response(data={"xml": res})
 
