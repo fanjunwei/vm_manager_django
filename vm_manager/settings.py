@@ -144,3 +144,9 @@ LIBVIRT_URI = os.environ.get("LIBVIRT_URI") or 'qemu:///system'
 VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or '/home/ms_vm/base_disk'
 VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or '/home/ms_vm/iso'
 VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or '/home/ms_vm/data'
+if not os.path.exists(VM_BASE_DISKS_DIR):
+    os.makedirs(VM_BASE_DISKS_DIR)
+if not os.path.exists(VM_ISO_DIR):
+    os.makedirs(VM_ISO_DIR)
+if not os.path.exists(VM_DATA_DIR):
+    os.makedirs(VM_DATA_DIR)
