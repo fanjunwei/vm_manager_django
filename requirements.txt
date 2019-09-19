@@ -1,6 +1,5 @@
 django==1.11.23
 djangorestframework==3.9.1
-libvirt-python==5.6.0
 futures
 six
 pyyaml
