@@ -204,7 +204,14 @@ def domain_action(uuid, action):
                 domain.destroy()
         elif action == 'delete':
             if state == 1:
+                vmXml = domain.XMLDesc(0)
                 domain.destroy()
+                root = ET.fromstring(vmXml)
+                disks_xml = root.findall("./devices/disk")
+                for xml_node in disks_xml:
+                    file_name = xml_node.find("./source").attrib['file']
+                    if os.path.exists(file_name):
+                        os.remove(file_name)
             domain.undefine()
         elif action == 'reboot':
             domain.reboot()
