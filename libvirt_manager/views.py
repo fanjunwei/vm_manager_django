@@ -400,9 +400,10 @@ class DetachDiskView(APIView):
                         raise exceptions.ValidationError("卸载光盘镜像需要关闭虚拟机")
                     domain.detachDevice(ET.tostring(find_disk))
                 devices_node.remove(find_disk)
-                file_name = find_disk.find("./source").attrib['file']
-                if os.path.exists(file_name):
-                    os.remove(file_name)
+                if find_disk.get('device') == 'disk':
+                    file_name = find_disk.find("./source").attrib['file']
+                    if os.path.exists(file_name):
+                        os.remove(file_name)
                 conn.defineXML(ET.tostring(vm_root))
 
         return Response()
