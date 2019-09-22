@@ -203,18 +203,18 @@ def domain_action(uuid, action):
             if state != 5:
                 domain.destroy()
         elif action == 'delete':
+            vmXml = domain.XMLDesc(0)
             if state == 1:
-                vmXml = domain.XMLDesc(0)
                 domain.destroy()
-                root = ET.fromstring(vmXml)
-                disks_xml = root.findall("./devices/disk")
-                for xml_node in disks_xml:
-                    device = xml_node.attrib['device']
-                    if device == 'disk':
-                        file_name = xml_node.find("./source").attrib['file']
-                        if os.path.exists(file_name):
-                            os.remove(file_name)
             domain.undefine()
+            root = ET.fromstring(vmXml)
+            disks_xml = root.findall("./devices/disk")
+            for xml_node in disks_xml:
+                device = xml_node.attrib['device']
+                if device == 'disk':
+                    file_name = xml_node.find("./source").attrib['file']
+                    if os.path.exists(file_name):
+                        os.remove(file_name)
         elif action == 'reboot':
             domain.reboot()
         elif action == 'start':
