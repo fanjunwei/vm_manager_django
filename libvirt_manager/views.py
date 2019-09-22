@@ -295,7 +295,8 @@ class ActionDomainsView(APIView):
             except libvirt.libvirtError:
                 raise exceptions.ValidationError("不存在此虚拟机")
             action = self.request.data.get("action")
-        create_immediate_task(func=domain_action, args=(uuid, action))
+        # create_immediate_task(func=domain_action, args=(uuid, action))
+        domain_action(uuid, action)
 
         return Response()
 
