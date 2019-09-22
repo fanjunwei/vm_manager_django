@@ -209,9 +209,11 @@ def domain_action(uuid, action):
                 root = ET.fromstring(vmXml)
                 disks_xml = root.findall("./devices/disk")
                 for xml_node in disks_xml:
-                    file_name = xml_node.find("./source").attrib['file']
-                    if os.path.exists(file_name):
-                        os.remove(file_name)
+                    device = xml_node.attrib['device']
+                    if device == 'disk':
+                        file_name = xml_node.find("./source").attrib['file']
+                        if os.path.exists(file_name):
+                            os.remove(file_name)
             domain.undefine()
         elif action == 'reboot':
             domain.reboot()
