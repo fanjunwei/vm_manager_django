@@ -95,6 +95,14 @@ class DomainsView(APIView):
         result = []
         with libvirt.open(settings.LIBVIRT_URI) as conn:
             domains = conn.listAllDomains()
+            net_map = {}
+            for net in conn.listAllNetworks():
+                net_name = net.name()
+                for i in net.DHCPLeases():
+                    mac = i.get("mac")
+                    ipaddr = i.get("ipaddr")
+                    key = "{}/{}".format(net_name, mac)
+                    net_map[key] = ipaddr
             for domain in domains:
                 vmXml = domain.XMLDesc(0)
                 root = ET.fromstring(vmXml)
@@ -117,6 +125,16 @@ class DomainsView(APIView):
                     dev = xml_node.find("./target").attrib['dev']
                     file_name = xml_node.find("./source").attrib['file']
                     disks.append({"dev": dev, 'file': file_name, 'device': device})
+                interface_xml = root.findall("./devices/interface")
+                ipaddrs = []
+                for xml_node in interface_xml:
+                    net_name = xml_node.find("./source").get("network")
+                    mac = xml_node.find("./mac").get("address")
+                    key = "{}/{}".format(net_name, mac)
+                    ip = net_map.get(key)
+                    if ip:
+                        ipaddrs.append(ip)
+
                 info = domain.info()
                 item = {
                     "uuid": domain.UUIDString(),
@@ -127,6 +145,7 @@ class DomainsView(APIView):
                     "cpu": info[3],
                     "vnc_port": port,
                     "disks": disks,
+                    "ipaddrs": ipaddrs,
                 }
                 result.append(item)
         return Response(data=result)
