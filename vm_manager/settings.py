@@ -150,3 +150,5 @@ if not os.path.exists(VM_ISO_DIR):
     os.makedirs(VM_ISO_DIR)
 if not os.path.exists(VM_DATA_DIR):
     os.makedirs(VM_DATA_DIR)
+if not os.path.exists(VM_DB_DIR):
+    os.makedirs(VM_DB_DIR)
