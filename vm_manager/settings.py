@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 import sys
 import os
-
+VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or '/opt/vm_manage/vm_data/base_disk'
+VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or '/opt/vm_manage/vm_data/iso'
+VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or '/opt/vm_manage/vm_data/data'
+VM_DB_DIR = os.environ.get("VM_DATA_DIR") or '/opt/vm_manage/vm_data/db'
 try:
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -86,7 +89,7 @@ WSGI_APPLICATION = 'vm_manager.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(VM_DB_DIR, 'db.sqlite3'),
     }
 }
 
@@ -141,9 +144,6 @@ REST_FRAMEWORK = {
 # **                   自定义配置                          **
 # **********************************************************
 LIBVIRT_URI = os.environ.get("LIBVIRT_URI") or 'qemu:///system'
-VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or '/opt/vm_manage/vm_data/base_disk'
-VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or '/opt/vm_manage/vm_data/iso'
-VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or '/opt/vm_manage/vm_data/data'
 if not os.path.exists(VM_BASE_DISKS_DIR):
     os.makedirs(VM_BASE_DISKS_DIR)
 if not os.path.exists(VM_ISO_DIR):
