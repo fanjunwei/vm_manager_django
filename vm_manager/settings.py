@@ -141,7 +141,7 @@ REST_FRAMEWORK = {
 # **                   自定义配置                          **
 # **********************************************************
 LIBVIRT_URI = os.environ.get("LIBVIRT_URI") or 'qemu:///system'
-VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or '/opt/vm_manage/base_disk'
+VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or '/opt/vm_manage/vm_data/base_disk'
 VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or '/opt/vm_manage/vm_data/iso'
 VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or '/opt/vm_manage/vm_data/data'
 if not os.path.exists(VM_BASE_DISKS_DIR):
