@@ -5,4 +5,4 @@ from django.apps import AppConfig
 
 
 class LibvirtManagerConfig(AppConfig):
-    name = 'libvirt_manager'
+    name = 'host_manager'

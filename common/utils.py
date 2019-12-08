@@ -26,7 +26,8 @@ class BaseTest(TransactionTestCase):
     def post(self, url, data=None, **extra):
         if data:
             data = json.dumps(data)
-        return self.client.post(url, data=data, content_type='application/json')
+        return self.client.post(url, data=data,
+                                content_type='application/json')
 
     def get(self, url, data=None, **extra):
         if data:
@@ -41,7 +42,8 @@ class BaseTest(TransactionTestCase):
     def delete(self, url, data=None, **extra):
         if data:
             data = json.dumps(data)
-        return self.client.delete(url, data=data, content_type='application/json')
+        return self.client.delete(url, data=data,
+                                  content_type='application/json')
 
 
 class ServerError(exceptions.APIException):
@@ -83,7 +85,7 @@ def create_immediate_task(func, args=None, kwargs=None):
         try:
             check_connection()
             func(*args, **kwargs)
-        except:
+        except Exception:
             common_except_log()
 
     get_threadpool().callInThread(task, *args, **kwargs)
@@ -161,6 +163,7 @@ def empty_dict():
 def empty_list():
     return []
 
+
 def get_error_message(detail):
     if isinstance(detail, (list, tuple)):
         values = []
@@ -177,6 +180,7 @@ def get_error_message(detail):
     else:
         return str(detail)
 
+
 def rest_exception_handler(exc, context):
     """
     Returns the response that should be used for any given exception.
@@ -189,7 +193,7 @@ def rest_exception_handler(exc, context):
     """
     try:
         from rest_framework.compat import set_rollback
-    except:
+    except Exception:
         from rest_framework.views import set_rollback
     if isinstance(exc, exceptions.APIException):
         headers = {}

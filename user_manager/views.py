@@ -28,7 +28,8 @@ class LoginView(APIView):
             "user_id": user.id,
             "access": ['super_admin', 'admin'],
             "token": self.request._request.session.session_key,
-            "avatar": 'https://file.iviewui.com/dist/a0e88e83800f138b94d2414621bd9704.png'
+            "avatar": 'https://file.iviewui.com/dist/'
+                      'a0e88e83800f138b94d2414621bd9704.png'
 
         })
 
@@ -43,5 +44,6 @@ class GetInfoView(APIView):
             "user_id": user.id,
             "access": ['super_admin', 'admin'],
             "token": self.request._request.session.session_key,
-            "avatar": 'https://file.iviewui.com/dist/a0e88e83800f138b94d2414621bd9704.png'
+            "avatar": 'https://file.iviewui.com/dist/'
+                      'a0e88e83800f138b94d2414621bd9704.png'
         })

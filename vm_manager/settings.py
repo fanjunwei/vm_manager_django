@@ -16,13 +16,14 @@ import os
 try:
     reload(sys)
     sys.setdefaultencoding('utf-8')
-except:
+except Exception:
     pass
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 VM_BASE_DIR = os.environ.get("VM_BASE_DIR") or BASE_DIR
-VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or VM_BASE_DIR + '/base_disk'
+VM_BASE_DISKS_DIR = os.environ.get(
+    "VM_BASE_DISKS_DIR") or VM_BASE_DIR + '/base_disk'
 VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or VM_BASE_DIR + '/iso'
 VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or VM_BASE_DIR + '/data'
 VM_DB_DIR = os.environ.get("VM_DB_DIR") or VM_BASE_DIR + '/db'
@@ -51,7 +52,7 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'django_celery_results',
     'user_manager',
-    'libvirt_manager',
+    'host_manager',
 ]
 
 MIDDLEWARE = [
@@ -130,7 +131,8 @@ REST_FRAMEWORK = {
     "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S",
     "DATETIME_INPUT_FORMATS": ["%Y-%m-%d %H:%M:%S"],
     'EXCEPTION_HANDLER': 'common.utils.rest_exception_handler',
-    'DEFAULT_PAGINATION_CLASS': 'common.pagination.LimitOffsetAndAllPagination',
+    'DEFAULT_PAGINATION_CLASS':
+        'common.pagination.LimitOffsetAndAllPagination',
     'DEFAULT_FILTER_BACKENDS': (
         'common.filters.OrderingFilter',  # ordering=account,-username
         'common.filters.SearchFilter',  # ?search=xxx

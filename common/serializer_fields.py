@@ -41,26 +41,29 @@ class SerializerGetSetField(serializers.Field):
 
     def bind(self, field_name, parent):
         # In order to enforce a consistent style, we error if a redundant
-        # 'get_method_name set_method_name' argument has been used. For example:
+        # 'get_method_name set_method_name' argument has been used.
+        # For example:
         # my_field = serializer.CharField(source='my_field')
-        default_get_method_name = 'get_{field_name}'.format(field_name=field_name)
+        default_get_method_name = 'get_{field_name}'.format(
+            field_name=field_name)
         assert self.get_method_name != default_get_method_name, (
-            "It is redundant to specify `%s` on SerializerMethodField '%s' in "
-            "serializer '%s', because it is the same as the default method name. "
-            "Remove the `get_method_name` argument." %
-            (self.get_method_name, field_name, parent.__class__.__name__)
+                "It is redundant to specify `%s` on SerializerMethodField "
+                "'%s' in serializer '%s', because it is the same as the "
+                "default method name. Remove the `get_method_name` argument." %
+                (self.get_method_name, field_name, parent.__class__.__name__)
         )
 
         # The method name should default to `get_{field_name}`.
         if self.get_method_name is None:
             self.get_method_name = default_get_method_name
 
-        default_set_method_name = 'set_{field_name}'.format(field_name=field_name)
+        default_set_method_name = 'set_{field_name}'.format(
+            field_name=field_name)
         assert self.set_method_name != default_set_method_name, (
-            "It is redundant to specify `%s` on SerializerMethodField '%s' in "
-            "serializer '%s', because it is the same as the default method name. "
-            "Remove the `set_method_name` argument." %
-            (self.set_method_name, field_name, parent.__class__.__name__)
+                "It is redundant to specify `%s` on SerializerMethodField "
+                "'%s' in serializer '%s', because it is the same as the "
+                "default method name. Remove the `set_method_name` argument." %
+                (self.set_method_name, field_name, parent.__class__.__name__)
         )
 
         # The method name should default to `get_{field_name}`.
@@ -124,7 +127,8 @@ class SerializerForeignField(serializers.RelatedField):
             return CustomManyRelatedField(*args, **kwargs)
         """
         no_is_delete = kwargs.pop('no_is_delete', False)
-        list_kwargs = {'child_relation': cls(*args, **kwargs), "no_is_delete": no_is_delete}
+        list_kwargs = {'child_relation': cls(*args, **kwargs),
+                       "no_is_delete": no_is_delete}
         for key in kwargs.keys():
             if key in MANY_RELATION_KWARGS:
                 list_kwargs[key] = kwargs[key]
@@ -163,10 +167,8 @@ class SerializerForeignField(serializers.RelatedField):
             id = value
         if not id:
             return None
-        try:
-            return self.get_queryset().get(pk=id)
-        except:
-            return None
+
+        return self.get_queryset().get(pk=id)
 
 
 class SerializerApiForeignField(serializers.RelatedField):
@@ -194,10 +196,7 @@ class SerializerApiForeignField(serializers.RelatedField):
             id = value
         if not id:
             return None
-        try:
-            return self.get_queryset().get(pk=id)
-        except:
-            return None
+        return self.get_queryset().get(pk=id)
 
 
 class SerializerChoicesField(serializers.Field):

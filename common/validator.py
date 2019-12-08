@@ -18,7 +18,8 @@ class FormatChecker(object):
             if re.match(r"^\d{4}-\d{2}-\d{2}$", instance):
                 return
         elif format == "date-time-blank":
-            if not instance or re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", instance):
+            if not instance or re.match(
+                    r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$", instance):
                 return
         elif format == "date-blank":
             if not instance or re.match(r"^\d{4}-\d{2}-\d{2}$", instance):
@@ -46,9 +47,11 @@ class JsonValidator(object):
         try:
             if isinstance(value, (str, unicode)):
                 value = json.loads(value)
-            jsonschema.validate(value, self.json_schema, format_checker=FormatChecker())
+            jsonschema.validate(value, self.json_schema,
+                                format_checker=FormatChecker())
         except jsonschema.ValidationError as ex:
-            raise django.core.exceptions.ValidationError(ex.message, code=self.code)
+            raise django.core.exceptions.ValidationError(ex.message,
+                                                         code=self.code)
 
 
 def validateJSON(value, json_schema):

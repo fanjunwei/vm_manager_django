@@ -3,7 +3,8 @@ from threading import local
 
 from django import http
 from django.conf import settings
-from django.utils.cache import get_conditional_response, set_response_etag, cc_delim_re
+from django.utils.cache import get_conditional_response, set_response_etag, \
+    cc_delim_re
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.http import parse_http_date_safe
 
@@ -50,8 +51,12 @@ class CorsDomainMiddleware(MiddlewareMixin):
                 response['Access-Control-Allow-Origin'] = origin
             else:
                 response['Access-Control-Allow-Origin'] = "*"
-            response['Access-Control-Allow-Headers'] = "Content-Type,X-Auth-Token,x-access-module"
-            response['Access-Control-Expose-Headers'] = "Content-Type,Set-Auth-Token,Set-Client"
+            response[
+                'Access-Control-Allow-Headers'] = \
+                "Content-Type,X-Auth-Token,x-access-module"
+            response[
+                'Access-Control-Expose-Headers'] = \
+                "Content-Type,Set-Auth-Token,Set-Client"
             response['Access-Control-Allow-Methods'] = "GET,POST,PUT,DELETE"
             return response
 
@@ -62,8 +67,12 @@ class CorsDomainMiddleware(MiddlewareMixin):
             response['Access-Control-Allow-Origin'] = origin
         else:
             response['Access-Control-Allow-Origin'] = "*"
-        response['Access-Control-Allow-Headers'] = "Content-Type,X-Auth-Token,x-access-module"
-        response['Access-Control-Expose-Headers'] = "Content-Type,Set-Auth-Token,Set-Client"
+        response[
+            'Access-Control-Allow-Headers'] = \
+            "Content-Type,X-Auth-Token,x-access-module"
+        response[
+            'Access-Control-Expose-Headers'] = \
+            "Content-Type,Set-Auth-Token,Set-Client"
         response['Access-Control-Allow-Methods'] = "GET,POST,PUT,DELETE"
         return response
 
@@ -96,8 +105,10 @@ class ETagMiddleware(MiddlewareMixin):
         """
         Return True if an ETag header should be added to response.
         """
-        cache_control_headers = cc_delim_re.split(response.get('Cache-Control', ''))
-        return all(header.lower() != 'no-store' for header in cache_control_headers)
+        cache_control_headers = cc_delim_re.split(
+            response.get('Cache-Control', ''))
+        return all(
+            header.lower() != 'no-store' for header in cache_control_headers)
 
 
 class SessionTransferMiddleware(MiddlewareMixin):
@@ -124,6 +135,8 @@ class SessionTransferMiddleware(MiddlewareMixin):
             request.COOKIES[settings.SESSION_COOKIE_NAME] = session_key
 
     def process_response(self, request, response):
-        if hasattr(request, 'header_session_key') and request.header_session_key:
-            response.set_cookie(settings.SESSION_COOKIE_NAME, request.header_session_key)
+        if hasattr(request,
+                   'header_session_key') and request.header_session_key:
+            response.set_cookie(settings.SESSION_COOKIE_NAME,
+                                request.header_session_key)
         return response

@@ -8,3 +8,4 @@ django-rest-swagger>=2.1.2
 more-itertools==5.0.0
 celery==4.3.0
 django-celery-results==1.1.2
+jsonschema

@@ -21,7 +21,7 @@ found_files = None
 
 def get_file_list():
     global found_files
-    if found_files == None:
+    if found_files is None:
         found_files = OrderedDict()
         for finder in get_finders():
             for path, storage in finder.list(None):

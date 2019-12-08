@@ -7,7 +7,8 @@ from six.moves import reduce
 from django.db import models
 from django.db.models.fields.related import RelatedField
 from rest_framework.compat import distinct
-from rest_framework.filters import SearchFilter as BaseSearchFilter, OrderingFilter as BaseOrderingFilter
+from rest_framework.filters import SearchFilter as BaseSearchFilter, \
+    OrderingFilter as BaseOrderingFilter
 
 LOOKUP_SEP = '__'
 
@@ -19,9 +20,11 @@ class SearchFilter(BaseSearchFilter):
         '~': 'iregex',
     }
 
+    def __init__(self):
+        self.request = None
+
     def filter_queryset(self, request, queryset, view):
         self.request = request
-
         search_fields = getattr(view, 'search_fields', None)
         search_terms = self.get_search_terms(request)
 
@@ -84,17 +87,20 @@ class OrderingFilter(BaseOrderingFilter):
         if index < 5:
             for field in model._meta.fields:
                 if isinstance(field, RelatedField):
-                    for i in self.get_all_fields(field.related_model, index + 1, parent + (field.name,)):
+                    for i in self.get_all_fields(field.related_model,
+                                                 index + 1,
+                                                 parent + (field.name,)):
                         yield i
                 else:
-                    yield ("__".join(parent + (field.name,)), field.verbose_name)
+                    yield "__".join(parent + (field.name,)), field.verbose_name
 
     def get_valid_fields(self, queryset, view, context=None):
         valid_fields = getattr(view, 'ordering_fields', self.ordering_fields)
 
         if valid_fields is None:
             # Default to allowing filtering on serializer fields
-            return self.get_default_valid_fields(queryset, view, context=context)
+            return self.get_default_valid_fields(queryset, view,
+                                                 context=context)
 
         elif valid_fields == '__all__':
             # View explicitly allows filtering on any model field

@@ -24,5 +24,5 @@ urlpatterns = [
     url(r'^static/(?P<path>.*)$', ms_static_serve),
     url(r'^docs/$', schema_view),
     url(r'^user/', include('user_manager.urls')),
-    url(r'^libvirt/', include('libvirt_manager.urls')),
+    url(r'^host/', include('host_manager.urls')),
 ]

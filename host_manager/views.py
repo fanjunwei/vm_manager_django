@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.utils import create_immediate_task
-from libvirt_manager.tasks import add
+from host_manager.tasks import add
 
 
 def new_mac():
@@ -29,21 +29,25 @@ def new_mac():
     return "{}:{}".format(base, res)
 
 
-def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_names, disk_size):
+def new_define(name, description, memory, cpu, disk_name, is_from_iso,
+               iso_names, disk_size):
     mac = new_mac()
     vm_data_dir = os.path.join(settings.VM_DATA_DIR, name)
     if not os.path.exists(vm_data_dir):
         os.makedirs(vm_data_dir)
     if not is_from_iso:
         disk_path = os.path.join(vm_data_dir, disk_name)
-        shutil.copyfile(os.path.join(settings.VM_BASE_DISKS_DIR, disk_name), disk_path)
+        shutil.copyfile(os.path.join(settings.VM_BASE_DISKS_DIR, disk_name),
+                        disk_path)
     else:
         disk_path = ""
         for i in range(100):
-            disk_path = os.path.join(vm_data_dir, "root_disk{}.qcow2".format(i))
+            disk_path = os.path.join(vm_data_dir,
+                                     "root_disk{}.qcow2".format(i))
             if not os.path.exists(disk_path):
                 break
-        os.system("qemu-img create -f qcow2 '{}' {}G".format(disk_path, disk_size))
+        os.system(
+            "qemu-img create -f qcow2 '{}' {}G".format(disk_path, disk_size))
 
     memory = str(memory)
     cpu = str(cpu)
@@ -59,7 +63,8 @@ def new_define(name, description, memory, cpu, disk_name, is_from_iso, iso_names
             dev = "hd{}".format(chr(0x61 + index))
             with open(iso_disk_xml_path, 'r') as f:
                 iso_disk_root = ET.fromstring(f.read())
-                iso_disk_root.find("./source").attrib['file'] = os.path.join(settings.VM_ISO_DIR, item)
+                iso_disk_root.find("./source").attrib['file'] = os.path.join(
+                    settings.VM_ISO_DIR, item)
                 iso_disk_root.find("./target").attrib['dev'] = dev
                 iso_disk_root_list.append(iso_disk_root)
 
@@ -127,7 +132,8 @@ class DomainsView(APIView):
                     device = xml_node.attrib['device']
                     dev = xml_node.find("./target").attrib['dev']
                     file_name = xml_node.find("./source").attrib['file']
-                    disks.append({"dev": dev, 'file': file_name, 'device': device})
+                    disks.append(
+                        {"dev": dev, 'file': file_name, 'device': device})
                 interface_xml = root.findall("./devices/interface")
                 ipaddrs = []
                 for xml_node in interface_xml:
@@ -159,7 +165,7 @@ class DomainsView(APIView):
             name = self.request.data.get("name")
             try:
                 conn.lookupByName(name)
-            except:
+            except Exception:
                 pass
             else:
                 raise exceptions.ValidationError("名称已存在")
@@ -173,11 +179,12 @@ class DomainsView(APIView):
             if disk_size:
                 try:
                     disk_size = float(disk_size)
-                except:
+                except Exception:
                     raise exceptions.ValidationError('disk_size 应为数字')
                 if disk_size < 0:
                     raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
-            res = new_define(name=name, description=description, memory=memory, cpu=cpu, disk_name=disk_name,
+            res = new_define(name=name, description=description, memory=memory,
+                             cpu=cpu, disk_name=disk_name,
                              is_from_iso=is_from_iso,
                              iso_names=iso_names, disk_size=disk_size)
             conn.defineXML(res)
@@ -417,7 +424,7 @@ class AttachDiskView(APIView):
             size = self.request.data.get("size")
             try:
                 size = float(size)
-            except:
+            except Exception:
                 raise exceptions.ValidationError("size应为数字")
             if size < 0:
                 raise exceptions.ValidationError("size应为大于0的数字")
