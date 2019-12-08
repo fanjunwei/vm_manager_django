@@ -12,10 +12,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 import sys
 import os
-VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or '/opt/vm_manage/vm_data/base_disk'
-VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or '/opt/vm_manage/vm_data/iso'
-VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or '/opt/vm_manage/vm_data/data'
-VM_DB_DIR = os.environ.get("VM_DATA_DIR") or '/opt/vm_manage/vm_data/db'
+
 try:
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -23,6 +20,12 @@ except:
     pass
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+VM_BASE_DIR = os.environ.get("VM_BASE_DIR") or BASE_DIR
+VM_BASE_DISKS_DIR = os.environ.get("VM_BASE_DISKS_DIR") or VM_BASE_DIR + '/base_disk'
+VM_ISO_DIR = os.environ.get("VM_ISO_DIR") or VM_BASE_DIR + '/iso'
+VM_DATA_DIR = os.environ.get("VM_DATA_DIR") or VM_BASE_DIR + '/data'
+VM_DB_DIR = os.environ.get("VM_DB_DIR") or VM_BASE_DIR + '/db'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
@@ -116,7 +119,7 @@ USE_TZ = False
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_all')
 STATIC_URL = '/static/'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = os.path.join(VM_BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 # **********************************************************
