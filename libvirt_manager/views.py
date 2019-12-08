@@ -8,12 +8,15 @@ import uuid
 from xml.etree import ElementTree as ET
 
 import libvirt
+from celery.result import AsyncResult
 from django.conf import settings
 from rest_framework import exceptions
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.utils import create_immediate_task
+from libvirt_manager.tasks import add
 
 
 def new_mac():
@@ -372,6 +375,39 @@ class IsoView(APIView):
         return Response(data={
             "files": files
         })
+
+
+class TaskView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, *args, **kwargs):
+        task_id = kwargs.get("task_id")
+        if not task_id:
+            task = add.delay(2, 2)
+
+            def callback(*args, **kwargs):
+                print ("in")
+                print(args)
+                print(kwargs)
+
+            result = AsyncResult(task.id)
+            result.then(callback)
+            # task_id = task.id
+            # result = AsyncResult(task_id)
+            print ("out")
+            return Response(data={
+                # "result": result.get(timeout=1),
+                "task_id": task.id,
+                # "status": result.state
+            })
+        else:
+            result = AsyncResult(task_id)
+            data = {
+                "state": result.state,
+            }
+            if result.state == 'SUCCESS':
+                data['result'] = result.get(timeout=1)
+            return Response(data=data)
 
 
 class AttachDiskView(APIView):

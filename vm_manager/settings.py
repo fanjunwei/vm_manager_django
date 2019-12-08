@@ -143,9 +143,13 @@ REST_FRAMEWORK = {
         # 'rest_framework.permissions.AllowAny',
     ),
 }
-
 # **********************************************************
-# **                   自定义配置                          **
+# **                   Celery Config                      **
+# **********************************************************
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+# **********************************************************
+# **                   Customer Config                    **
 # **********************************************************
 LIBVIRT_URI = os.environ.get("LIBVIRT_URI") or 'qemu:///system'
 if not os.path.exists(VM_BASE_DISKS_DIR):
