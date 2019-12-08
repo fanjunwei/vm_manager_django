@@ -9,3 +9,7 @@
 *.sln
 *.sw*
 db.sqlite3
+/data
+/db
+/base_disk
+/iso
