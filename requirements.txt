@@ -1,6 +1,10 @@
+libvirt-python
 django==1.11.23
 djangorestframework==3.9.1
 futures
 six
 pyyaml
 django-rest-swagger>=2.1.2
+more-itertools==5.0.0
+celery==4.3.0
+django-celery-results==1.1.2
