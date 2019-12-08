@@ -16,17 +16,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.utils import create_immediate_task
+from common.viewset import BaseViewSet
+from host_manager.models import Host, new_vnc_port
+from host_manager.serializers import HostSerializer
 from host_manager.tasks import add
-
-
-def new_mac():
-    base = 'de:be:59'
-    mac_list = []
-    for i in range(3):
-        random_str = "".join(random.sample("0123456789abcdef", 2))
-        mac_list.append(random_str)
-    res = ":".join(mac_list)
-    return "{}:{}".format(base, res)
 
 
 def new_define(name, description, memory, cpu, disk_name, is_from_iso,
@@ -85,110 +78,114 @@ def new_define(name, description, memory, cpu, disk_name, is_from_iso,
     return ET.tostring(vm_root)
 
 
-status_map = {
-    0: "no state",
-    1: "running",
-    2: "blocked on resource",
-    3: "paused by user",
-    4: "being shut down",
-    5: 'shut off',
-    6: 'crashed',
-    7: 'suspended by guest power management',
+class HostViewSet(BaseViewSet):
+    search_fields = ('name')
+    serializer_class = HostSerializer
+    check_unique_fields = [('name', '名称')]
 
-}
+    def create(self, request, *args, **kwargs):
+        instance_uuid = str(uuid.uuid4())
+        self.request.data['instance_uuid'] = instance_uuid
+        self.request.data['instance_name'] = 'instance_' + instance_uuid
+        self.request.data['vnc_port'] = new_vnc_port()
+        h = Host.objects.filter(is_delete=False).order_by('-vnc_port').first()
+        if h:
+            self.request.data['vnc_port'] = h.vnc_port + 1
+        return super(HostViewSet, self).create(request, *args, **kwargs)
 
+    def get_queryset(self):
+        return Host.objects.filter(is_delete=False)
 
-class DomainsView(APIView):
-    def get(self, request, *args, **kwargs):
-        result = []
-        with libvirt.open(settings.LIBVIRT_URI) as conn:
-            domains = conn.listAllDomains()
-            net_map = {}
-            for net in conn.listAllNetworks():
-                net_name = net.name()
-                for i in net.DHCPLeases():
-                    mac = i.get("mac")
-                    ipaddr = i.get("ipaddr")
-                    key = "{}/{}".format(net_name, mac)
-                    net_map[key] = ipaddr
-            for domain in domains:
-                vmXml = domain.XMLDesc(0)
-                root = ET.fromstring(vmXml)
-                port = root.find('./devices/graphics').get('port')
-                description = root.find('./description')
-                if description is not None:
-                    description = description.text
-                else:
-                    description = ""
-                if port:
-                    port = int(port)
-                    if port < 0:
-                        port = ""
-                else:
-                    port = ""
-                disks_xml = root.findall("./devices/disk")
-                disks = []
-                for xml_node in disks_xml:
-                    device = xml_node.attrib['device']
-                    dev = xml_node.find("./target").attrib['dev']
-                    file_name = xml_node.find("./source").attrib['file']
-                    disks.append(
-                        {"dev": dev, 'file': file_name, 'device': device})
-                interface_xml = root.findall("./devices/interface")
-                ipaddrs = []
-                for xml_node in interface_xml:
-                    net_name = xml_node.find("./source").get("network")
-                    mac = xml_node.find("./mac").get("address")
-                    key = "{}/{}".format(net_name, mac)
-                    ip = net_map.get(key)
-                    if ip:
-                        ipaddrs.append(ip)
-
-                info = domain.info()
-                item = {
-                    "uuid": domain.UUIDString(),
-                    "description": description,
-                    "name": domain.name(),
-                    "state": status_map[info[0]],
-                    "mem_kb": info[1],
-                    "cpu": info[3],
-                    "vnc_port": port,
-                    "disks": disks,
-                    "ipaddrs": ipaddrs,
-                }
-                result.append(item)
-        return Response(data=result)
-
-    def post(self, request, *args, **kwargs):
-        with libvirt.open(settings.LIBVIRT_URI) as conn:
-
-            name = self.request.data.get("name")
-            try:
-                conn.lookupByName(name)
-            except Exception:
-                pass
-            else:
-                raise exceptions.ValidationError("名称已存在")
-            description = self.request.data.get("description")
-            memory = self.request.data.get("memory")
-            cpu = self.request.data.get("cpu")
-            disk_name = self.request.data.get("disk_name")
-            is_from_iso = self.request.data.get("is_from_iso")
-            iso_names = self.request.data.get("iso_names")
-            disk_size = self.request.data.get("disk_size")
-            if disk_size:
-                try:
-                    disk_size = float(disk_size)
-                except Exception:
-                    raise exceptions.ValidationError('disk_size 应为数字')
-                if disk_size < 0:
-                    raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
-            res = new_define(name=name, description=description, memory=memory,
-                             cpu=cpu, disk_name=disk_name,
-                             is_from_iso=is_from_iso,
-                             iso_names=iso_names, disk_size=disk_size)
-            conn.defineXML(res)
-        return Response(data={"xml": res})
+    # def get(self, request, *args, **kwargs):
+    #     result = []
+    #     with libvirt.open(settings.LIBVIRT_URI) as conn:
+    #         domains = conn.listAllDomains()
+    #         net_map = {}
+    #         for net in conn.listAllNetworks():
+    #             net_name = net.name()
+    #             for i in net.DHCPLeases():
+    #                 mac = i.get("mac")
+    #                 ipaddr = i.get("ipaddr")
+    #                 key = "{}/{}".format(net_name, mac)
+    #                 net_map[key] = ipaddr
+    #         for domain in domains:
+    #             vmXml = domain.XMLDesc(0)
+    #             root = ET.fromstring(vmXml)
+    #             port = root.find('./devices/graphics').get('port')
+    #             description = root.find('./description')
+    #             if description is not None:
+    #                 description = description.text
+    #             else:
+    #                 description = ""
+    #             if port:
+    #                 port = int(port)
+    #                 if port < 0:
+    #                     port = ""
+    #             else:
+    #                 port = ""
+    #             disks_xml = root.findall("./devices/disk")
+    #             disks = []
+    #             for xml_node in disks_xml:
+    #                 device = xml_node.attrib['device']
+    #                 dev = xml_node.find("./target").attrib['dev']
+    #                 file_name = xml_node.find("./source").attrib['file']
+    #                 disks.append(
+    #                     {"dev": dev, 'file': file_name, 'device': device})
+    #             interface_xml = root.findall("./devices/interface")
+    #             ipaddrs = []
+    #             for xml_node in interface_xml:
+    #                 net_name = xml_node.find("./source").get("network")
+    #                 mac = xml_node.find("./mac").get("address")
+    #                 key = "{}/{}".format(net_name, mac)
+    #                 ip = net_map.get(key)
+    #                 if ip:
+    #                     ipaddrs.append(ip)
+    #
+    #             info = domain.info()
+    #             item = {
+    #                 "uuid": domain.UUIDString(),
+    #                 "description": description,
+    #                 "name": domain.name(),
+    #                 "state": status_map[info[0]],
+    #                 "mem_kb": info[1],
+    #                 "cpu": info[3],
+    #                 "vnc_port": port,
+    #                 "disks": disks,
+    #                 "ipaddrs": ipaddrs,
+    #             }
+    #             result.append(item)
+    #     return Response(data=result)
+    #
+    # def post(self, request, *args, **kwargs):
+    #     with libvirt.open(settings.LIBVIRT_URI) as conn:
+    #
+    #         name = self.request.data.get("name")
+    #         try:
+    #             conn.lookupByName(name)
+    #         except Exception:
+    #             pass
+    #         else:
+    #             raise exceptions.ValidationError("名称已存在")
+    #         description = self.request.data.get("description")
+    #         memory = self.request.data.get("memory")
+    #         cpu = self.request.data.get("cpu")
+    #         disk_name = self.request.data.get("disk_name")
+    #         is_from_iso = self.request.data.get("is_from_iso")
+    #         iso_names = self.request.data.get("iso_names")
+    #         disk_size = self.request.data.get("disk_size")
+    #         if disk_size:
+    #             try:
+    #                 disk_size = float(disk_size)
+    #             except Exception:
+    #                 raise exceptions.ValidationError('disk_size 应为数字')
+    #             if disk_size < 0:
+    #                 raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
+    #         res = new_define(name=name, description=description, memory=memory,
+    #                          cpu=cpu, disk_name=disk_name,
+    #                          is_from_iso=is_from_iso,
+    #                          iso_names=iso_names, disk_size=disk_size)
+    #         conn.defineXML(res)
+    #     return Response(data={"xml": res})
 
 
 class DomainsXmlView(APIView):
@@ -414,6 +411,11 @@ class TaskView(APIView):
             }
             if result.state == 'SUCCESS':
                 data['result'] = result.get(timeout=1)
+            else:
+                try:
+                    data['result'] = result.get(timeout=1)
+                except Exception as ex:
+                    data['result'] = str(ex)
             return Response(data=data)
 
 

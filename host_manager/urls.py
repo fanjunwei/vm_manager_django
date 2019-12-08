@@ -17,7 +17,8 @@ from django.conf.urls import url
 from . import views
 
 urlpatterns = [
-    url(r'^domains/$', views.DomainsView.as_view()),
+    url(r'^host/$', views.HostViewSet.as_list()),
+    url(r'^host/(?P<pk>[\w\-]+)$', views.HostViewSet.as_detail()),
     url(r'^domains/(?P<uuid>[\w\-]+)/action/$',
         views.ActionDomainsView.as_view()),
     url(r'^domains/(?P<uuid>[\w\-]+)/xml/$', views.DomainsXmlView.as_view()),

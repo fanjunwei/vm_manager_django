@@ -2,6 +2,7 @@
 import datetime
 import json
 import logging
+import random
 import traceback
 import uuid
 
@@ -235,3 +236,13 @@ def rest_exception_handler(exc, context):
 
     # Note: Unhandled exceptions will raise a 500 error.
     return None
+
+
+def new_mac():
+    base = 'de:be:59'
+    mac_list = []
+    for i in range(3):
+        random_str = "".join(random.sample("0123456789abcdef", 2))
+        mac_list.append(random_str)
+    res = ":".join(mac_list)
+    return "{}:{}".format(base, res)
