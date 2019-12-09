@@ -11,11 +11,10 @@ from rest_framework import exceptions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.utils import create_immediate_task
 from common.viewset import BaseViewSet
 from host_manager.models import Host, new_vnc_port, HostStorage
 from host_manager.serializers import HostSerializer
-from host_manager.tasks import host_action, attach_disk
+from host_manager.tasks import host_action, attach_disk, detach_disk
 
 
 class HostViewSet(BaseViewSet):
@@ -67,29 +66,6 @@ class DomainsXmlView(APIView):
             except Exception as ex:
                 raise exceptions.ValidationError(str(ex))
         return Response()
-
-
-def detach_disk(uuid, dev):
-    with libvirt.open(settings.LIBVIRT_URI) as conn:
-        try:
-            domain = conn.lookupByUUIDString(uuid)
-        except libvirt.libvirtError:
-            return
-        info = domain.info()
-        state = info[0]
-        vm_root = ET.fromstring(domain.XMLDesc(0))
-        disks = vm_root.findall("./devices/disk")
-        devices_node = vm_root.find('./devices')
-        find_disk = None
-        for disk in disks:
-            if disk.find('./target').get("dev") == dev:
-                find_disk = disk
-                break
-        if find_disk:
-            if state == 1:
-                domain.detachDevice(ET.tostring(find_disk))
-            devices_node.remove(find_disk)
-            conn.defineXML(ET.tostring(vm_root))
 
 
 class HostActionView(APIView):
