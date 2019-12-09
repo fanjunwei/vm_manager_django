@@ -156,3 +156,49 @@ def host_action(host_id, action):
             domain.reboot()
         elif action == 'start':
             domain.create()
+
+
+@shared_task
+def attach_disk(host_id, disk_size_gb):
+    host = Host.objects.filter(id=host_id, is_delete=False).first()
+    if not host:
+        raise TaskError("not found host")
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(host.instance_uuid)
+        except libvirt.libvirtError:
+            return
+        vm_data_dir = os.path.join(settings.VM_DATA_DIR, host.instance_name)
+        if not os.path.exists(vm_data_dir):
+            os.makedirs(vm_data_dir)
+        for i in range(100):
+            disk_path = os.path.join(vm_data_dir, "disk{}.qcow2".format(i))
+            if not os.path.exists(disk_path):
+                break
+        os.system("qemu-img create -f qcow2 '{}' {}G".format(disk_path, disk_size_gb))
+        disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/storage/disk.xml')
+        info = domain.info()
+        state = info[0]
+        devs = HostStorage.objects.filter(host=host, is_delete=False).values_list('dev', flat=True)
+        devs = list(devs)
+        for i in range(26):
+            new_dev = "vd{}".format(chr(0x61 + i))
+            if new_dev not in devs:
+                break
+
+        if state == 1:
+            with open(disk_xml_path, 'r') as f:
+                disk_node = ET.fromstring(f.read())
+
+                disk_node.find("./source").attrib['file'] = disk_path
+                disk_node.find("./target").attrib['dev'] = new_dev
+                disk_node.find("./target").attrib['bus'] = 'virtio'
+            domain.attachDevice(ET.tostring(disk_node))
+        host_storage = HostStorage()
+        host_storage.host_id = host_id
+        host_storage.path = disk_path
+        host_storage.device = HOST_STORAGE_DEVICE_DISK
+        host_storage.dev = HOST_STORAGE_DEVICE_DISK
+        host_storage.bus = 'virtio'
+        host_storage.save()
+        define_host(host_id)
