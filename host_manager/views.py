@@ -135,7 +135,7 @@ def detach_disk(uuid, dev):
             conn.defineXML(ET.tostring(vm_root))
 
 
-class HostDomainsView(APIView):
+class HostActionView(APIView):
     def post(self, request, *args, **kwargs):
         pk = self.kwargs.get("pk")
         action = self.request.data.get("action")
