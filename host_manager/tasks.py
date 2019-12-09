@@ -24,6 +24,7 @@ def define_host(host_id):
     host_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/host.xml')
     disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/storage/disk.xml')
     cdrom_disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/storage/cdrom.xml')
+    network_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/network.xml')
 
     with open(host_xml_path, 'r') as f:
         host_root = ET.fromstring(f.read())
@@ -52,7 +53,7 @@ def define_host(host_id):
                 disk_root.find("./target").attrib['bus'] = storage.bus
                 host_root.find("./devices").append(disk_root)
     for network in HostNetwork.objects.filter(host=host, is_delete=False):
-        with open(disk_xml_path, 'r') as f:
+        with open(network_xml_path, 'r') as f:
             network_root = ET.fromstring(f.read())
             network_root.find("./mac").attrib['address'] = network.mac
             network_root.find("./source").attrib['network'] = network.network_name
