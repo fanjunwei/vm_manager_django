@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+import datetime
 import os
 import uuid
 from xml.etree import ElementTree as ET
@@ -15,6 +16,7 @@ from common.utils import create_immediate_task
 from common.viewset import BaseViewSet
 from host_manager.models import Host, new_vnc_port
 from host_manager.serializers import HostSerializer
+from host_manager.tasks import host_action
 
 
 class HostViewSet(BaseViewSet):
@@ -31,6 +33,18 @@ class HostViewSet(BaseViewSet):
         if h:
             self.request.data['vnc_port'] = h.vnc_port + 1
         return super(HostViewSet, self).create(request, *args, **kwargs)
+
+    def perform_destroy(self, instance):
+        def callback(*args, **kwargs):
+            instance.is_delete = True
+            instance.delete_time = datetime.datetime.now()
+            instance.save()
+
+        task = host_action.delay(instance.id, 'delete')
+        instance.last_task_id = task.id
+        instance.last_task_name = "删除虚拟机"
+        instance.save()
+        task.then(callback)
 
     def get_queryset(self):
         return Host.objects.filter(is_delete=False)

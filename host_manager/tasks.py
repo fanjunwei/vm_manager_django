@@ -113,3 +113,34 @@ def create_host(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_
     host_net.network_name = "default"
     host_net.save()
     define_host(host_id)
+
+
+@shared_task
+def host_action(host_id, action):
+    host = Host.objects.filter(id=host_id).first()
+    if not host:
+        raise TaskError("not found host")
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(host.instance_uuid)
+        except libvirt.libvirtError:
+            return
+        info = domain.info()
+        state = info[0]
+        if action == 'shutdown':
+            if state == 1:
+                domain.shutdown()
+        elif action == 'destroy':
+            if state != 5:
+                domain.destroy()
+        elif action == 'delete':
+            if state == 1:
+                domain.destroy()
+            domain.undefine()
+            for storage in HostStorage.objects.filter(host=host, is_delete=False, device=HOST_STORAGE_DEVICE_DISK):
+                if os.path.exists(storage.path):
+                    os.remove(storage.path)
+        elif action == 'reboot':
+            domain.reboot()
+        elif action == 'start':
+            domain.create()
