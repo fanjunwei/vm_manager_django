@@ -31,7 +31,6 @@ def define_host(host_id):
         host_root = ET.fromstring(f.read())
     host_root.find("./uuid").text = host.instance_uuid
     host_root.find("./name").text = host.instance_name
-    host_root.find("./description").text = host.desc
     host_root.find("./memory").attrib['unit'] = 'KiB'
     host_root.find("./memory").text = str(host.mem_size_kb)
     host_root.find("./currentMemory").attrib['unit'] = 'KiB'

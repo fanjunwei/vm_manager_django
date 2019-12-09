@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import datetime
 import os
 import uuid
 from xml.etree import ElementTree as ET

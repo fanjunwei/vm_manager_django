@@ -1,7 +1,6 @@
 <domain type='kvm' id='100'>
     <name>xx</name>
     <uuid>xx</uuid>
-    <description></description>
     <memory unit='KiB'>0</memory>
     <currentMemory unit='KiB'>0</currentMemory>
     <vcpu placement='static'>0</vcpu>

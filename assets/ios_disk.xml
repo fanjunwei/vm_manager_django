@@ -1,4 +1,0 @@
-<disk type='file' device='cdrom'>
-    <source file='path'/>
-    <target dev='hda' bus='ide'/>
-</disk>
