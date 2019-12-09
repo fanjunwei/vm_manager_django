@@ -242,4 +242,4 @@ def detach_disk(host_id, disk_id):
 
         disk_obj.is_delete = True
         disk_obj.save()
-        disk_obj(host_id)
+        define_host(host_id)
