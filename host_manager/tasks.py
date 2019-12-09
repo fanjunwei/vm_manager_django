@@ -125,7 +125,7 @@ def host_action(host_id, action):
         try:
             domain = conn.lookupByUUIDString(host.instance_uuid)
         except libvirt.libvirtError:
-            pass
+            domain = None
         if action == 'shutdown':
             info = domain.info()
             state = info[0]
