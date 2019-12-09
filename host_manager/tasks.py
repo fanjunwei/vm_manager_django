@@ -1,5 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 
+import datetime
 import os
 import shutil
 from xml.etree import ElementTree as ET
@@ -124,22 +125,31 @@ def host_action(host_id, action):
         try:
             domain = conn.lookupByUUIDString(host.instance_uuid)
         except libvirt.libvirtError:
-            return
-        info = domain.info()
-        state = info[0]
+            pass
         if action == 'shutdown':
+            info = domain.info()
+            state = info[0]
             if state == 1:
                 domain.shutdown()
         elif action == 'destroy':
+            info = domain.info()
+            state = info[0]
             if state != 5:
                 domain.destroy()
         elif action == 'delete':
-            if state == 1:
-                domain.destroy()
-            domain.undefine()
+            if domain:
+                info = domain.info()
+                state = info[0]
+                if state == 1:
+                    domain.destroy()
+                domain.undefine()
             for storage in HostStorage.objects.filter(host=host, is_delete=False, device=HOST_STORAGE_DEVICE_DISK):
                 if os.path.exists(storage.path):
                     os.remove(storage.path)
+            host.is_delete = True
+            host.delete_time = datetime.datetime.now()
+            host.save()
+
         elif action == 'reboot':
             domain.reboot()
         elif action == 'start':

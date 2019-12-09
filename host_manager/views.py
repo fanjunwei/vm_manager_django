@@ -35,16 +35,10 @@ class HostViewSet(BaseViewSet):
         return super(HostViewSet, self).create(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
-        def callback(*args, **kwargs):
-            instance.is_delete = True
-            instance.delete_time = datetime.datetime.now()
-            instance.save()
-
         task = host_action.delay(instance.id, 'delete')
         instance.last_task_id = task.id
         instance.last_task_name = "删除虚拟机"
         instance.save()
-        task.then(callback)
 
     def get_queryset(self):
         return Host.objects.filter(is_delete=False)
