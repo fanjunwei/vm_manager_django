@@ -37,6 +37,8 @@ class Host(BaseModel):
     vnc_port = models.IntegerField()
     mem_size_kb = models.BigIntegerField()
     xml = models.TextField()
+    last_task_id = models.CharField(max_length=50)
+    last_task_name = models.CharField(max_length=100)
 
     class Meta:
         ordering = ['-create_time']

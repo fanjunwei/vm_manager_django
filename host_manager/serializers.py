@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 import libvirt
 from django.conf import settings
+from django.db import transaction
 from rest_framework import serializers
 from xml.etree import ElementTree as ET
 from host_manager.models import Host
+from host_manager.tasks import create_host
 
 status_map = {
     0: "no state",
@@ -67,6 +69,24 @@ class HostSerializer(serializers.ModelSerializer):
                 "state": status_map[info[0]],
                 "ipaddrs": ipaddrs,
             }
+
+    def create(self, validated_data):
+        instance = super(HostSerializer, self).create(validated_data)
+
+        def callback():
+            data = self.initial_data
+            host_id = instance.id
+            is_from_iso = data.get("is_from_iso")
+            base_disk_name = data.get("base_disk_name")
+            iso_names = data.get("iso_names")
+            init_disk_size_gb = data.get("init_disk_size_gb")
+            task = create_host.delay(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb)
+            instance.last_task_id = task.id
+            instance.last_task_name = "创建虚拟机"
+            instance.save()
+
+        transaction.on_commit(callback)
+        return instance
 
     class Meta:
         model = Host

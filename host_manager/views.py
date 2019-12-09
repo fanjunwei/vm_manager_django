@@ -79,7 +79,7 @@ def new_define(name, description, memory, cpu, disk_name, is_from_iso,
 
 
 class HostViewSet(BaseViewSet):
-    search_fields = ('name')
+    search_fields = ('name',)
     serializer_class = HostSerializer
     check_unique_fields = [('name', '名称')]
 

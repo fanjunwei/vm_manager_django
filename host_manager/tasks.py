@@ -6,7 +6,6 @@ from xml.etree import ElementTree as ET
 import libvirt
 from celery import shared_task
 from django.conf import settings
-from rest_framework import exceptions
 
 from host_manager.models import Host, HostStorage, HOST_STORAGE_DEVICE_DISK, HOST_STORAGE_DEVICE_CDROM, HostNetwork
 
@@ -69,5 +68,5 @@ def define_host(host_id):
 
 
 @shared_task
-def add(x, y):
-    raise exceptions.NotFound()
+def create_host(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb):
+    pass
