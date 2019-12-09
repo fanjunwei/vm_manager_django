@@ -118,6 +118,9 @@ def create_host(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_
 
 @shared_task
 def host_action(host_id, action):
+    if action == 'sync':
+        define_host(host_id)
+        return
     host = Host.objects.filter(id=host_id).first()
     if not host:
         raise TaskError("not found host")

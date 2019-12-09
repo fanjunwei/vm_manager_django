@@ -147,6 +147,7 @@ class HostActionView(APIView):
             "destroy": "强制关机",
             "reboot": "重启",
             "start": "开机",
+            "sync": "同步XML配置",
         }
         task = host_action.delay(pk, action)
         instance.last_task_id = task.id
