@@ -19,8 +19,7 @@ from . import views
 urlpatterns = [
     url(r'^host/$', views.HostViewSet.as_list()),
     url(r'^host/(?P<pk>[\w\-]+)/$', views.HostViewSet.as_detail()),
-    url(r'^domains/(?P<uuid>[\w\-]+)/action/$',
-        views.ActionDomainsView.as_view()),
+    url(r'^host/(?P<pk>[\w\-]+)/action/$', views.HostDomainsView.as_view()),
     url(r'^domains/(?P<uuid>[\w\-]+)/xml/$', views.DomainsXmlView.as_view()),
     url(r'^domains/(?P<uuid>[\w\-]+)/attach_disk/$',
         views.AttachDiskView.as_view()),

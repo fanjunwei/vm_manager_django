@@ -70,39 +70,6 @@ class DomainsXmlView(APIView):
         return Response()
 
 
-def domain_action(uuid, action):
-    with libvirt.open(settings.LIBVIRT_URI) as conn:
-        try:
-            domain = conn.lookupByUUIDString(uuid)
-        except libvirt.libvirtError:
-            return
-        info = domain.info()
-        state = info[0]
-        if action == 'shutdown':
-            if state == 1:
-                domain.shutdown()
-        elif action == 'destroy':
-            if state != 5:
-                domain.destroy()
-        elif action == 'delete':
-            vmXml = domain.XMLDesc(0)
-            if state == 1:
-                domain.destroy()
-            domain.undefine()
-            root = ET.fromstring(vmXml)
-            disks_xml = root.findall("./devices/disk")
-            for xml_node in disks_xml:
-                device = xml_node.attrib['device']
-                if device == 'disk':
-                    file_name = xml_node.find("./source").attrib['file']
-                    if os.path.exists(file_name):
-                        os.remove(file_name)
-        elif action == 'reboot':
-            domain.reboot()
-        elif action == 'start':
-            domain.create()
-
-
 def attach_disk(uuid, size):
     with libvirt.open(settings.LIBVIRT_URI) as conn:
         try:
@@ -168,18 +135,23 @@ def detach_disk(uuid, dev):
             conn.defineXML(ET.tostring(vm_root))
 
 
-class ActionDomainsView(APIView):
+class HostDomainsView(APIView):
     def post(self, request, *args, **kwargs):
-        with libvirt.open(settings.LIBVIRT_URI) as conn:
-            uuid = self.kwargs.get("uuid")
-            try:
-                conn.lookupByUUIDString(uuid)
-            except libvirt.libvirtError:
-                raise exceptions.ValidationError("不存在此虚拟机")
-            action = self.request.data.get("action")
-        # create_immediate_task(func=domain_action, args=(uuid, action))
-        domain_action(uuid, action)
-
+        pk = self.kwargs.get("pk")
+        action = self.request.data.get("action")
+        instance = Host.objects.filter(id=pk).first()
+        if not instance:
+            raise exceptions.NotFound()
+        action_map = {
+            "shutdown": "关机",
+            "destroy": "强制关机",
+            "reboot": "重启",
+            "start": "开机",
+        }
+        task = host_action.delay(pk, action)
+        instance.last_task_id = task.id
+        instance.last_task_name = action_map[action]
+        instance.save()
         return Response()
 
 
