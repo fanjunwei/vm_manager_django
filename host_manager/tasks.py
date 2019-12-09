@@ -57,7 +57,7 @@ def define_host(host_id):
             network_root = ET.fromstring(f.read())
             network_root.find("./mac").attrib['address'] = network.mac
             network_root.find("./source").attrib['network'] = network.network_name
-            host_root.find("./devices").append(disk_root)
+            host_root.find("./devices").append(network_root)
     host_xml = ET.tostring(host_root)
     with libvirt.open(settings.LIBVIRT_URI) as conn:
         conn.defineXML(host_xml)
