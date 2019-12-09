@@ -1,10 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import libvirt
+from celery.result import AsyncResult
 from django.conf import settings
+from django.db import transaction
 from rest_framework import serializers
 from xml.etree import ElementTree as ET
 from host_manager.models import Host
+from host_manager.tasks import create_host
 
 status_map = {
     0: "no state",
@@ -23,12 +26,54 @@ class HostSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
     disks = serializers.SerializerMethodField()
     networks = serializers.SerializerMethodField()
+    last_task = serializers.SerializerMethodField()
 
     def get_disks(self, obj):
         result = []
         for i in obj.hoststorage_set.filter(is_delete=False):
             result.append({"dev": i.dev, 'file': i.path, 'device': i.device})
         return result
+
+    def get_last_task(self, obj):
+        """The tasks current state.
+
+        Possible values includes:
+
+            *PENDING*
+
+                The task is waiting for execution.
+
+            *STARTED*
+
+                The task has been started.
+
+            *RETRY*
+
+                The task is to be retried, possibly because of failure.
+
+            *FAILURE*
+
+                The task raised an exception, or has exceeded the retry limit.
+                The :attr:`result` attribute then contains the
+                exception raised by the task.
+
+            *SUCCESS*
+
+                The task executed successfully.  The :attr:`result` attribute
+                then contains the tasks return value.
+        """
+        last_task_id = obj.last_task_id
+        if last_task_id:
+            result = AsyncResult(last_task_id)
+            data = {
+                "state": result.state,
+                "name": obj.last_task_name
+            }
+            if result.state == 'SUCCESS':
+                return None
+            elif result.state == 'FAILURE':
+                data['result'] = str(result.result)
+            return data
 
     def get_networks(self, obj):
         result = []
@@ -67,6 +112,24 @@ class HostSerializer(serializers.ModelSerializer):
                 "state": status_map[info[0]],
                 "ipaddrs": ipaddrs,
             }
+
+    def create(self, validated_data):
+        instance = super(HostSerializer, self).create(validated_data)
+
+        def callback():
+            data = self.initial_data
+            host_id = instance.id
+            is_from_iso = data.get("is_from_iso")
+            base_disk_name = data.get("base_disk_name")
+            iso_names = data.get("iso_names")
+            init_disk_size_gb = data.get("init_disk_size_gb")
+            task = create_host.delay(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb)
+            instance.last_task_id = task.id
+            instance.last_task_name = "创建虚拟机"
+            instance.save()
+
+        transaction.on_commit(callback)
+        return instance
 
     class Meta:
         model = Host
