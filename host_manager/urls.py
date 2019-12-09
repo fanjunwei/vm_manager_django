@@ -29,6 +29,6 @@ urlpatterns = [
     url(r'^overview/$', views.OverviewView.as_view()),
     url(r'^base_disks/$', views.BaseDisksView.as_view()),
     url(r'^iso/$', views.IsoView.as_view()),
-    url(r'^task/$', views.TaskView.as_view()),
-    url(r'^task/(?P<task_id>[\w\-]+)/$', views.TaskView.as_view()),
+    # url(r'^task/$', views.TaskView.as_view()),
+    # url(r'^task/(?P<task_id>[\w\-]+)/$', views.TaskView.as_view()),
 ]

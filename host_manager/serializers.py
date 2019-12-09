@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import libvirt
+from celery.result import AsyncResult
 from django.conf import settings
 from django.db import transaction
 from rest_framework import serializers
@@ -25,12 +26,54 @@ class HostSerializer(serializers.ModelSerializer):
     info = serializers.SerializerMethodField()
     disks = serializers.SerializerMethodField()
     networks = serializers.SerializerMethodField()
+    last_task = serializers.SerializerMethodField()
 
     def get_disks(self, obj):
         result = []
         for i in obj.hoststorage_set.filter(is_delete=False):
             result.append({"dev": i.dev, 'file': i.path, 'device': i.device})
         return result
+
+    def get_last_task(self, obj):
+        """The tasks current state.
+
+        Possible values includes:
+
+            *PENDING*
+
+                The task is waiting for execution.
+
+            *STARTED*
+
+                The task has been started.
+
+            *RETRY*
+
+                The task is to be retried, possibly because of failure.
+
+            *FAILURE*
+
+                The task raised an exception, or has exceeded the retry limit.
+                The :attr:`result` attribute then contains the
+                exception raised by the task.
+
+            *SUCCESS*
+
+                The task executed successfully.  The :attr:`result` attribute
+                then contains the tasks return value.
+        """
+        last_task_id = obj.last_task_id
+        if last_task_id:
+            result = AsyncResult(last_task_id)
+            data = {
+                "state": result.state,
+                "name": obj.last_task_name
+            }
+            if result.state == 'SUCCESS':
+                return None
+            elif result.state == 'FAILURE':
+                data['result'] = str(result.result)
+            return data
 
     def get_networks(self, obj):
         result = []

@@ -2,16 +2,12 @@
 from __future__ import unicode_literals
 
 import os
-import random
-import shutil
 import uuid
 from xml.etree import ElementTree as ET
 
 import libvirt
-from celery.result import AsyncResult
 from django.conf import settings
 from rest_framework import exceptions
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,63 +15,6 @@ from common.utils import create_immediate_task
 from common.viewset import BaseViewSet
 from host_manager.models import Host, new_vnc_port
 from host_manager.serializers import HostSerializer
-from host_manager.tasks import add
-
-
-def new_define(name, description, memory, cpu, disk_name, is_from_iso,
-               iso_names, disk_size):
-    mac = new_mac()
-    vm_data_dir = os.path.join(settings.VM_DATA_DIR, name)
-    if not os.path.exists(vm_data_dir):
-        os.makedirs(vm_data_dir)
-    if not is_from_iso:
-        disk_path = os.path.join(vm_data_dir, disk_name)
-        shutil.copyfile(os.path.join(settings.VM_BASE_DISKS_DIR, disk_name),
-                        disk_path)
-    else:
-        disk_path = ""
-        for i in range(100):
-            disk_path = os.path.join(vm_data_dir,
-                                     "root_disk{}.qcow2".format(i))
-            if not os.path.exists(disk_path):
-                break
-        os.system(
-            "qemu-img create -f qcow2 '{}' {}G".format(disk_path, disk_size))
-
-    memory = str(memory)
-    cpu = str(cpu)
-    vm_xml_path = os.path.join(settings.BASE_DIR, 'assets/vm.xml')
-    disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/disk.xml')
-    iso_disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/ios_disk.xml')
-    with open(disk_xml_path, 'r') as f:
-        disk_root = ET.fromstring(f.read())
-        disk_root.find("./source").attrib['file'] = disk_path
-    if is_from_iso:
-        iso_disk_root_list = []
-        for index, item in enumerate(iso_names):
-            dev = "hd{}".format(chr(0x61 + index))
-            with open(iso_disk_xml_path, 'r') as f:
-                iso_disk_root = ET.fromstring(f.read())
-                iso_disk_root.find("./source").attrib['file'] = os.path.join(
-                    settings.VM_ISO_DIR, item)
-                iso_disk_root.find("./target").attrib['dev'] = dev
-                iso_disk_root_list.append(iso_disk_root)
-
-    with open(vm_xml_path, 'r') as f:
-        vm_root = ET.fromstring(f.read())
-        vm_root.find("./uuid").text = str(uuid.uuid4())
-        vm_root.find("./name").text = name
-        vm_root.find("./description").text = description
-        vm_root.find("./memory").text = memory
-        vm_root.find("./currentMemory").text = memory
-        vm_root.find("./vcpu").text = cpu
-        vm_root.find("./devices").append(disk_root)
-        if is_from_iso:
-            for i in iso_disk_root_list:
-                vm_root.find("./devices").append(i)
-        vm_root.find("./devices/interface/mac").attrib['address'] = mac
-
-    return ET.tostring(vm_root)
 
 
 class HostViewSet(BaseViewSet):
@@ -95,97 +34,6 @@ class HostViewSet(BaseViewSet):
 
     def get_queryset(self):
         return Host.objects.filter(is_delete=False)
-
-    # def get(self, request, *args, **kwargs):
-    #     result = []
-    #     with libvirt.open(settings.LIBVIRT_URI) as conn:
-    #         domains = conn.listAllDomains()
-    #         net_map = {}
-    #         for net in conn.listAllNetworks():
-    #             net_name = net.name()
-    #             for i in net.DHCPLeases():
-    #                 mac = i.get("mac")
-    #                 ipaddr = i.get("ipaddr")
-    #                 key = "{}/{}".format(net_name, mac)
-    #                 net_map[key] = ipaddr
-    #         for domain in domains:
-    #             vmXml = domain.XMLDesc(0)
-    #             root = ET.fromstring(vmXml)
-    #             port = root.find('./devices/graphics').get('port')
-    #             description = root.find('./description')
-    #             if description is not None:
-    #                 description = description.text
-    #             else:
-    #                 description = ""
-    #             if port:
-    #                 port = int(port)
-    #                 if port < 0:
-    #                     port = ""
-    #             else:
-    #                 port = ""
-    #             disks_xml = root.findall("./devices/disk")
-    #             disks = []
-    #             for xml_node in disks_xml:
-    #                 device = xml_node.attrib['device']
-    #                 dev = xml_node.find("./target").attrib['dev']
-    #                 file_name = xml_node.find("./source").attrib['file']
-    #                 disks.append(
-    #                     {"dev": dev, 'file': file_name, 'device': device})
-    #             interface_xml = root.findall("./devices/interface")
-    #             ipaddrs = []
-    #             for xml_node in interface_xml:
-    #                 net_name = xml_node.find("./source").get("network")
-    #                 mac = xml_node.find("./mac").get("address")
-    #                 key = "{}/{}".format(net_name, mac)
-    #                 ip = net_map.get(key)
-    #                 if ip:
-    #                     ipaddrs.append(ip)
-    #
-    #             info = domain.info()
-    #             item = {
-    #                 "uuid": domain.UUIDString(),
-    #                 "description": description,
-    #                 "name": domain.name(),
-    #                 "state": status_map[info[0]],
-    #                 "mem_kb": info[1],
-    #                 "cpu": info[3],
-    #                 "vnc_port": port,
-    #                 "disks": disks,
-    #                 "ipaddrs": ipaddrs,
-    #             }
-    #             result.append(item)
-    #     return Response(data=result)
-    #
-    # def post(self, request, *args, **kwargs):
-    #     with libvirt.open(settings.LIBVIRT_URI) as conn:
-    #
-    #         name = self.request.data.get("name")
-    #         try:
-    #             conn.lookupByName(name)
-    #         except Exception:
-    #             pass
-    #         else:
-    #             raise exceptions.ValidationError("名称已存在")
-    #         description = self.request.data.get("description")
-    #         memory = self.request.data.get("memory")
-    #         cpu = self.request.data.get("cpu")
-    #         disk_name = self.request.data.get("disk_name")
-    #         is_from_iso = self.request.data.get("is_from_iso")
-    #         iso_names = self.request.data.get("iso_names")
-    #         disk_size = self.request.data.get("disk_size")
-    #         if disk_size:
-    #             try:
-    #                 disk_size = float(disk_size)
-    #             except Exception:
-    #                 raise exceptions.ValidationError('disk_size 应为数字')
-    #             if disk_size < 0:
-    #                 raise exceptions.ValidationError('disk_size 应为大于0的数字数字')
-    #         res = new_define(name=name, description=description, memory=memory,
-    #                          cpu=cpu, disk_name=disk_name,
-    #                          is_from_iso=is_from_iso,
-    #                          iso_names=iso_names, disk_size=disk_size)
-    #         conn.defineXML(res)
-    #     return Response(data={"xml": res})
 
 
 class DomainsXmlView(APIView):
@@ -381,42 +229,42 @@ class IsoView(APIView):
         })
 
 
-class TaskView(APIView):
-    permission_classes = (AllowAny,)
-
-    def get(self, request, *args, **kwargs):
-        task_id = kwargs.get("task_id")
-        if not task_id:
-            task = add.delay(2, 2)
-
-            def callback(*args, **kwargs):
-                print ("in")
-                print(args)
-                print(kwargs)
-
-            result = AsyncResult(task.id)
-            result.then(callback)
-            # task_id = task.id
-            # result = AsyncResult(task_id)
-            print ("out")
-            return Response(data={
-                # "result": result.get(timeout=1),
-                "task_id": task.id,
-                # "status": result.state
-            })
-        else:
-            result = AsyncResult(task_id)
-            data = {
-                "state": result.state,
-            }
-            if result.state == 'SUCCESS':
-                data['result'] = result.get(timeout=1)
-            else:
-                try:
-                    data['result'] = result.get(timeout=1)
-                except Exception as ex:
-                    data['result'] = str(ex)
-            return Response(data=data)
+# class TaskView(APIView):
+#     permission_classes = (AllowAny,)
+#
+#     def get(self, request, *args, **kwargs):
+#         task_id = kwargs.get("task_id")
+#         if not task_id:
+#             task = add.delay(2, 2)
+#
+#             def callback(*args, **kwargs):
+#                 print ("in")
+#                 print(args)
+#                 print(kwargs)
+#
+#             result = AsyncResult(task.id)
+#             result.then(callback)
+#             # task_id = task.id
+#             # result = AsyncResult(task_id)
+#             print ("out")
+#             return Response(data={
+#                 # "result": result.get(timeout=1),
+#                 "task_id": task.id,
+#                 # "status": result.state
+#             })
+#         else:
+#             result = AsyncResult(task_id)
+#             data = {
+#                 "state": result.state,
+#             }
+#             if result.state == 'SUCCESS':
+#                 data['result'] = result.get(timeout=1)
+#             else:
+#                 try:
+#                     data['result'] = result.get(timeout=1)
+#                 except Exception as ex:
+#                     data['result'] = str(ex)
+#             return Response(data=data)
 
 
 class AttachDiskView(APIView):
