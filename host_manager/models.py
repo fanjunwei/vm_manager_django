@@ -32,7 +32,7 @@ class Host(BaseModel):
     name = models.CharField(max_length=100)
     instance_uuid = models.CharField(max_length=50)
     instance_name = models.CharField(max_length=100)
-    desc = models.CharField(max_length=200)
+    desc = models.CharField(max_length=200, null=True, blank=True)
     cpu_core = models.IntegerField()
     vnc_port = models.IntegerField()
     mem_size_kb = models.BigIntegerField()
