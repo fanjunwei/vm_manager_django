@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from common.utils import create_immediate_task
 from common.viewset import BaseViewSet
-from host_manager.models import Host, new_vnc_port
+from host_manager.models import Host, new_vnc_port, HostStorage
 from host_manager.serializers import HostSerializer
 from host_manager.tasks import host_action, attach_disk
 
@@ -228,33 +228,16 @@ class AttachDiskView(APIView):
 
 class DetachDiskView(APIView):
     def post(self, request, *args, **kwargs):
-        with libvirt.open(settings.LIBVIRT_URI) as conn:
-            uuid = self.kwargs.get("uuid")
-            dev = self.request.data.get("dev")
-            try:
-                domain = conn.lookupByUUIDString(uuid)
-            except libvirt.libvirtError:
-                raise exceptions.ValidationError("不存在此虚拟机")
-            info = domain.info()
-            state = info[0]
-            vm_root = ET.fromstring(domain.XMLDesc(0))
-            disks = vm_root.findall("./devices/disk")
-            devices_node = vm_root.find('./devices')
-            find_disk = None
-            for disk in disks:
-                if disk.find('./target').get("dev") == dev:
-                    find_disk = disk
-                    break
-            if find_disk:
-                if state == 1:
-                    if find_disk.get('device') == 'cdrom':
-                        raise exceptions.ValidationError("卸载光盘镜像需要关闭虚拟机")
-                    domain.detachDevice(ET.tostring(find_disk))
-                devices_node.remove(find_disk)
-                if find_disk.get('device') == 'disk':
-                    file_name = find_disk.find("./source").attrib['file']
-                    if os.path.exists(file_name):
-                        os.remove(file_name)
-                conn.defineXML(ET.tostring(vm_root))
-
+        pk = self.kwargs.get("pk")
+        disk_id = self.kwargs.get("disk_id")
+        host = Host.objects.filter(id=pk, is_delete=False).first()
+        if not host:
+            raise exceptions.NotFound("not found host")
+        disk = HostStorage.objects.filter(host_id=pk, id=disk_id).first()
+        if not disk:
+            raise exceptions.NotFound("not found disk")
+        task = detach_disk.delay(pk, disk_id)
+        host.last_task_id = task.id
+        host.last_task_name = '解挂存储'
+        host.save()
         return Response()

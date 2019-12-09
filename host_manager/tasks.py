@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import absolute_import, unicode_literals
 
 import datetime
@@ -201,4 +202,44 @@ def attach_disk(host_id, disk_size_gb):
         host_storage.dev = new_dev
         host_storage.bus = 'virtio'
         host_storage.save()
+        define_host(host_id)
+
+
+@shared_task
+def detach_disk(host_id, disk_id):
+    host = Host.objects.filter(id=host_id, is_delete=False).first()
+    if not host:
+        raise TaskError("not found host")
+    disk = HostStorage.objects.filter(host_id=host_id, id=disk_id).first()
+    if not disk:
+        raise TaskError("not found disk")
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(host.instance_uuid)
+        except libvirt.libvirtError:
+            domain = None
+        if domain:
+            info = domain.info()
+            state = info[0]
+            vm_root = ET.fromstring(domain.XMLDesc(0))
+            disks = vm_root.findall("./devices/disk")
+            devices_node = vm_root.find('./devices')
+            find_disk = None
+            for disk in disks:
+                if disk.find('./target').get("dev") == disk.dev:
+                    find_disk = disk
+                    break
+            if find_disk:
+                if state == 1:
+                    if find_disk.get('device') == 'cdrom':
+                        raise TaskError("卸载光盘镜像需要关闭虚拟机")
+                    domain.detachDevice(ET.tostring(find_disk))
+                devices_node.remove(find_disk)
+                if find_disk.get('device') == 'disk':
+                    file_name = find_disk.find("./source").attrib['file']
+                    if os.path.exists(file_name):
+                        os.remove(file_name)
+
+        disk.is_delete = True
+        disk.save()
         define_host(host_id)

@@ -31,7 +31,7 @@ class HostSerializer(serializers.ModelSerializer):
     def get_disks(self, obj):
         result = []
         for i in obj.hoststorage_set.filter(is_delete=False):
-            result.append({"dev": i.dev, 'file': i.path, 'device': i.device})
+            result.append({'id': i.id, "dev": i.dev, 'file': i.path, 'device': i.device})
         return result
 
     def get_last_task(self, obj):
