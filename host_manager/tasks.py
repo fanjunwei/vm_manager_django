@@ -210,8 +210,8 @@ def detach_disk(host_id, disk_id):
     host = Host.objects.filter(id=host_id, is_delete=False).first()
     if not host:
         raise TaskError("not found host")
-    disk = HostStorage.objects.filter(host_id=host_id, id=disk_id).first()
-    if not disk:
+    disk_obj = HostStorage.objects.filter(host_id=host_id, id=disk_id).first()
+    if not disk_obj:
         raise TaskError("not found disk")
     with libvirt.open(settings.LIBVIRT_URI) as conn:
         try:
@@ -226,7 +226,7 @@ def detach_disk(host_id, disk_id):
             devices_node = vm_root.find('./devices')
             find_disk = None
             for disk in disks:
-                if disk.find('./target').get("dev") == disk.dev:
+                if disk.find('./target').get("dev") == disk_obj.dev:
                     find_disk = disk
                     break
             if find_disk:
@@ -240,6 +240,6 @@ def detach_disk(host_id, disk_id):
                     if os.path.exists(file_name):
                         os.remove(file_name)
 
-        disk.is_delete = True
-        disk.save()
-        define_host(host_id)
+        disk_obj.is_delete = True
+        disk_obj.save()
+        disk_obj(host_id)
