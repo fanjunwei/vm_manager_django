@@ -8,6 +8,7 @@ from xml.etree import ElementTree as ET
 
 import libvirt
 from django.conf import settings
+from django.db import transaction
 from rest_framework import exceptions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,7 +16,7 @@ from rest_framework.views import APIView
 from common.viewset import BaseViewSet
 from host_manager.models import Host, new_vnc_port, HostStorage, HOST_STORAGE_DEVICE_CDROM, HostSnapshot
 from host_manager.serializers import HostSerializer, SnapshotSerializer
-from host_manager.tasks import host_action, attach_disk, detach_disk, save_disk_to_base
+from host_manager.tasks import host_action, attach_disk, detach_disk, save_disk_to_base, snapshot_revert
 
 
 class HostViewSet(BaseViewSet):
@@ -250,3 +251,24 @@ class SnapshotViewSet(BaseViewSet):
     def get_queryset(self):
         host_id = self.kwargs.get("host_id")
         return HostSnapshot.objects.filter(is_delete=False, host_id=host_id)
+
+
+class SnapshotRevertView(APIView):
+
+    def post(self, request, *args, **kwargs):
+        host_id = self.kwargs.get("host_id")
+        pk = self.kwargs.get("pk")
+
+        snap_obj = HostSnapshot.objects.filter(id=pk, host_id=host_id, is_delete=False).first()
+        if not snap_obj:
+            raise exceptions.NotFound('not found snap')
+
+        def callback():
+            task = snapshot_revert.delay(pk)
+            host_instance = Host.objects.filter(id=host_id).first()
+            host_instance.last_task_id = task.id
+            host_instance.last_task_name = "恢复快照"
+            host_instance.save()
+
+        transaction.on_commit(callback)
+        return Response()
