@@ -258,6 +258,14 @@ def save_disk_to_base(host_id, disk_id, name):
         path = os.path.join(settings.VM_BASE_DISKS_DIR, name)
         if os.path.exists(path):
             raise TaskError("文件已存在")
-        domain.suspend()
+        info = domain.info()
+        state = info[0]
+        if state == 1:
+            is_running = True
+        else:
+            is_running = False
+        if is_running:
+            domain.suspend()
         shutil.copyfile(disk_obj.path, path)
-        domain.resume()
+        if is_running:
+            domain.resume()
