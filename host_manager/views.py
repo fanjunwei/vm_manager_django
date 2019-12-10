@@ -244,7 +244,7 @@ class SnapshotViewSet(BaseViewSet):
 
     def create(self, request, *args, **kwargs):
         self.request.data['host'] = self.kwargs.get("host_id")
-        self.request.data['instance_name'] = str(time.time())
+        self.request.data['instance_name'] = str(int(time.time()))
         return super(SnapshotViewSet, self).create(request, *args, **kwargs)
 
     def get_queryset(self):
