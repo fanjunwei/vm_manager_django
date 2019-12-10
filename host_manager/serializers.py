@@ -7,7 +7,7 @@ from django.db import transaction
 from rest_framework import serializers
 from xml.etree import ElementTree as ET
 from host_manager.models import Host
-from host_manager.tasks import create_host
+from host_manager.tasks import create_host, define_host
 
 status_map = {
     0: "no state",
@@ -130,6 +130,14 @@ class HostSerializer(serializers.ModelSerializer):
 
         transaction.on_commit(callback)
         return instance
+
+    def update(self, instance, validated_data):
+        if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data:
+            task = define_host.delay(instance.id)
+            instance.last_task_id = task.id
+            instance.last_task_name = "修改配额"
+            instance.save()
+        return super(HostSerializer, self).update(instance, validated_data)
 
     class Meta:
         model = Host
