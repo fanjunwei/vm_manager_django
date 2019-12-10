@@ -133,10 +133,14 @@ class HostSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data:
-            task = define_host.delay(instance.id)
-            instance.last_task_id = task.id
-            instance.last_task_name = "修改配额"
-            instance.save()
+            def callback():
+                task = define_host.delay(instance.id)
+                instance.last_task_id = task.id
+                instance.last_task_name = "修改配额"
+                instance.save()
+
+            transaction.on_commit(callback)
+
         return super(HostSerializer, self).update(instance, validated_data)
 
     class Meta:
