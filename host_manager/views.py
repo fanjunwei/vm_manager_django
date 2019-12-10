@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import os
+import time
 import uuid
 from xml.etree import ElementTree as ET
 
@@ -12,8 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.viewset import BaseViewSet
-from host_manager.models import Host, new_vnc_port, HostStorage, HOST_STORAGE_DEVICE_CDROM
-from host_manager.serializers import HostSerializer
+from host_manager.models import Host, new_vnc_port, HostStorage, HOST_STORAGE_DEVICE_CDROM, HostSnapshot
+from host_manager.serializers import HostSerializer, SnapshotSerializer
 from host_manager.tasks import host_action, attach_disk, detach_disk, save_disk_to_base
 
 
@@ -27,9 +28,6 @@ class HostViewSet(BaseViewSet):
         self.request.data['instance_uuid'] = instance_uuid
         self.request.data['instance_name'] = 'instance_' + instance_uuid
         self.request.data['vnc_port'] = new_vnc_port()
-        h = Host.objects.filter(is_delete=False).order_by('-vnc_port').first()
-        if h:
-            self.request.data['vnc_port'] = h.vnc_port + 1
         return super(HostViewSet, self).create(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
@@ -237,3 +235,18 @@ class SaveDiskView(APIView):
         host.last_task_name = '保存硬盘'
         host.save()
         return Response()
+
+
+class SnapshotViewSet(BaseViewSet):
+    search_fields = ('name',)
+    serializer_class = SnapshotSerializer
+    check_unique_fields = [('name', '名称')]
+
+    def create(self, request, *args, **kwargs):
+        self.request.data['host'] = self.kwargs.get("host_id")
+        self.request.data['instance_name'] = str(time.time())
+        return super(SnapshotViewSet, self).create(request, *args, **kwargs)
+
+    def get_queryset(self):
+        host_id = self.kwargs.get("host_id")
+        return HostSnapshot.objects.filter(is_delete=False, host_id=host_id)

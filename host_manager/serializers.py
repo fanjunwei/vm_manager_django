@@ -6,8 +6,8 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework import serializers
 from xml.etree import ElementTree as ET
-from host_manager.models import Host
-from host_manager.tasks import create_host, define_host
+from host_manager.models import Host, HostSnapshot
+from host_manager.tasks import create_host, define_host, snapshot_create
 
 status_map = {
     0: "no state",
@@ -151,3 +151,36 @@ class HostSerializer(serializers.ModelSerializer):
             'modify_time': {'read_only': True},
             'delete_time': {'read_only': True},
         }
+
+
+class SnapshotSerializer(serializers.ModelSerializer):
+    parent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HostSnapshot
+        exclude = ('is_delete',)
+        extra_kwargs = {
+            'create_time': {'read_only': True},
+            'modify_time': {'read_only': True},
+            'delete_time': {'read_only': True},
+        }
+
+    def get_parent(self, obj):
+        if obj.parent_instance_name:
+            parent = HostSnapshot.objects.filter(is_delete=False, instance_name=obj.parent_instance_name)
+            if parent:
+                return parent.name
+
+    def create(self, validated_data):
+        instance = super(SnapshotSerializer, self).create(validated_data)
+        host_id = instance.host_id
+
+        def callback():
+            task = snapshot_create.delay(instance.id)
+            host_instance = Host.objects.filter(id=host_id).first()
+            host_instance.last_task_id = task.id
+            host_instance.last_task_name = "创建快照"
+            host_instance.save()
+
+        transaction.on_commit(callback)
+        return instance

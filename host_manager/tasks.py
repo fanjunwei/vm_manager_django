@@ -11,7 +11,8 @@ from celery import shared_task
 from django.conf import settings
 
 from common.utils import new_mac
-from host_manager.models import Host, HostStorage, HOST_STORAGE_DEVICE_DISK, HOST_STORAGE_DEVICE_CDROM, HostNetwork
+from host_manager.models import Host, HostStorage, HOST_STORAGE_DEVICE_DISK, HOST_STORAGE_DEVICE_CDROM, HostNetwork, \
+    HostSnapshot
 
 
 class TaskError(Exception):
@@ -269,3 +270,44 @@ def save_disk_to_base(host_id, disk_id, name):
         shutil.copyfile(disk_obj.path, path)
         if is_running:
             domain.resume()
+
+
+@shared_task
+def snapshot_create(snapshot_id):
+    snapshot_obj = HostSnapshot.objects.filter(id=snapshot_id).first()
+    if not snapshot_obj:
+        raise TaskError("not found snapshot")
+    host = snapshot_obj.host
+    try:
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            try:
+                domain = conn.lookupByUUIDString(host.instance_uuid)
+            except libvirt.libvirtError:
+                raise TaskError("not found domain")
+            snapshot_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/snapshot/snapshot.xml')
+            snapshot_disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/snapshot/disk.xml')
+            with open(snapshot_xml_path, 'r') as f:
+                snapshot_root = ET.fromstring(f.read())
+            snapshot_root.find("./name").text = snapshot_obj.instance_name
+            snapshot_root.find("./description").text = snapshot_obj.desc
+            for storage in HostStorage.objects.filter(host=host, device=HOST_STORAGE_DEVICE_DISK, is_delete=False):
+                with open(snapshot_disk_xml_path, 'r') as f:
+                    disk_root = ET.fromstring(f.read())
+                    disk_root.attrib['name'] = storage.dev
+                    # path_args = os.path.splitext(storage.path)
+                    # new_path = "{}_snapshot_{}{}".format(path_args[0], snapshot_obj.instance_name, path_args[1])
+                    # disk_root.find("./source").attrib['file'] = new_path
+                    snapshot_root.find("./disks").append(disk_root)
+            new_snapshot = domain.snapshotCreateXML(ET.tostring(snapshot_root))
+            new_xml = new_snapshot.getXMLDesc()
+            new_xml_root = ET.fromstring(new_xml)
+            parent = new_xml_root.find("./parent/name")
+            if parent:
+                snapshot_obj.parent_instance_name = parent.text
+            snapshot_obj.state = new_xml_root.find("./state").text
+            snapshot_obj.save()
+
+    except Exception:
+        snapshot_obj.is_delete = True
+        snapshot_obj.save()
+        raise

@@ -72,3 +72,15 @@ class HostNetwork(BaseModel):
 
     class Meta:
         ordering = ['create_time']
+
+
+class HostSnapshot(BaseModel):
+    host = models.ForeignKey(Host)
+    instance_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
+    desc = models.CharField(max_length=200, null=True, blank=True)
+    parent_instance_name = models.CharField(max_length=100, null=True)
+    state = models.CharField(max_length=20, null=True)
+
+    class Meta:
+        ordering = ['create_time']
