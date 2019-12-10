@@ -195,14 +195,14 @@ def attach_disk(host_id, disk_size_gb):
                 disk_node.find("./target").attrib['dev'] = new_dev
                 disk_node.find("./target").attrib['bus'] = 'virtio'
             domain.attachDevice(ET.tostring(disk_node))
-        host_storage = HostStorage()
-        host_storage.host_id = host_id
-        host_storage.path = disk_path
-        host_storage.device = HOST_STORAGE_DEVICE_DISK
-        host_storage.dev = new_dev
-        host_storage.bus = 'virtio'
-        host_storage.save()
-        define_host(host_id)
+    host_storage = HostStorage()
+    host_storage.host_id = host_id
+    host_storage.path = disk_path
+    host_storage.device = HOST_STORAGE_DEVICE_DISK
+    host_storage.dev = new_dev
+    host_storage.bus = 'virtio'
+    host_storage.save()
+    define_host(host_id)
 
 
 @shared_task
