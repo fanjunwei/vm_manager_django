@@ -233,9 +233,9 @@ def detach_disk(host_id, disk_id):
                         break
                 if find_disk:
                     domain.detachDevice(ET.tostring(find_disk))
-        if disk_obj.device == HOST_STORAGE_DEVICE_DISK:
-            if os.path.exists(disk_obj.path):
-                os.remove(disk_obj.path)
-        disk_obj.is_delete = True
-        disk_obj.save()
-        define_host(host_id)
+    if disk_obj.device == HOST_STORAGE_DEVICE_DISK:
+        if os.path.exists(disk_obj.path):
+            os.remove(disk_obj.path)
+    disk_obj.is_delete = True
+    disk_obj.save()
+    define_host(host_id)
