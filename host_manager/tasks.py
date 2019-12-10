@@ -221,25 +221,21 @@ def detach_disk(host_id, disk_id):
         if domain:
             info = domain.info()
             state = info[0]
-            vm_root = ET.fromstring(domain.XMLDesc(0))
-            disks = vm_root.findall("./devices/disk")
-            devices_node = vm_root.find('./devices')
-            find_disk = None
-            for disk in disks:
-                if disk.find('./target').get("dev") == disk_obj.dev:
-                    find_disk = disk
-                    break
-            if find_disk:
-                if state == 1:
-                    if find_disk.get('device') == 'cdrom':
-                        raise TaskError("卸载光盘镜像需要关闭虚拟机")
+            if state == 1:
+                if disk_obj.device == HOST_STORAGE_DEVICE_CDROM:
+                    raise TaskError("卸载CDROM需要关闭虚拟机")
+                vm_root = ET.fromstring(domain.XMLDesc(0))
+                disks = vm_root.findall("./devices/disk")
+                find_disk = None
+                for disk in disks:
+                    if disk.find('./target').get("dev") == disk_obj.dev:
+                        find_disk = disk
+                        break
+                if find_disk:
                     domain.detachDevice(ET.tostring(find_disk))
-                devices_node.remove(find_disk)
-                if find_disk.get('device') == 'disk':
-                    file_name = find_disk.find("./source").attrib['file']
-                    if os.path.exists(file_name):
-                        os.remove(file_name)
-
+        if disk_obj.device == HOST_STORAGE_DEVICE_DISK:
+            if os.path.exists(disk_obj.path):
+                os.remove(disk_obj.path)
         disk_obj.is_delete = True
         disk_obj.save()
         define_host(host_id)
