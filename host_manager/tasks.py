@@ -239,3 +239,23 @@ def detach_disk(host_id, disk_id):
     disk_obj.is_delete = True
     disk_obj.save()
     define_host(host_id)
+
+
+@shared_task
+def save_disk_to_base(host_id, disk_id, name):
+    host = Host.objects.filter(id=host_id, is_delete=False).first()
+    if not host:
+        raise TaskError("not found host")
+    disk_obj = HostStorage.objects.filter(host_id=host_id, id=disk_id).first()
+    if not disk_obj:
+        raise TaskError("not found disk")
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(host.instance_uuid)
+        except libvirt.libvirtError:
+            raise TaskError("not found domain")
+        domain.suspend()
+        name = os.path.splitext(name)[0] + ".qcow2"
+        path = os.path.join(settings.VM_BASE_DISKS_DIR, name)
+        shutil.copyfile(disk_obj.path, path)
+        domain.resume()

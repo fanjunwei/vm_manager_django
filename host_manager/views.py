@@ -12,9 +12,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.viewset import BaseViewSet
-from host_manager.models import Host, new_vnc_port, HostStorage
+from host_manager.models import Host, new_vnc_port, HostStorage, HOST_STORAGE_DEVICE_CDROM
 from host_manager.serializers import HostSerializer
-from host_manager.tasks import host_action, attach_disk, detach_disk
+from host_manager.tasks import host_action, attach_disk, detach_disk, save_disk_to_base
 
 
 class HostViewSet(BaseViewSet):
@@ -215,5 +215,25 @@ class DetachDiskView(APIView):
         task = detach_disk.delay(pk, disk_id)
         host.last_task_id = task.id
         host.last_task_name = '解挂存储'
+        host.save()
+        return Response()
+
+
+class SaveDiskView(APIView):
+    def post(self, request, *args, **kwargs):
+        pk = self.kwargs.get("pk")
+        disk_id = self.kwargs.get("disk_id")
+        name = self.request.data.get("name")
+        host = Host.objects.filter(id=pk, is_delete=False).first()
+        if not host:
+            raise exceptions.NotFound("not found host")
+        disk = HostStorage.objects.filter(host_id=pk, id=disk_id).first()
+        if not disk:
+            raise exceptions.NotFound("not found disk")
+        if disk.device == HOST_STORAGE_DEVICE_CDROM:
+            raise exceptions.ValidationError("光盘无须保存")
+        task = save_disk_to_base.delay(pk, disk_id, name)
+        host.last_task_id = task.id
+        host.last_task_name = '保存硬盘'
         host.save()
         return Response()
