@@ -257,5 +257,7 @@ def save_disk_to_base(host_id, disk_id, name):
         domain.suspend()
         name = os.path.splitext(name)[0] + ".qcow2"
         path = os.path.join(settings.VM_BASE_DISKS_DIR, name)
+        if os.path.exists(path):
+            raise TaskError("文件已存在")
         shutil.copyfile(disk_obj.path, path)
         domain.resume()
