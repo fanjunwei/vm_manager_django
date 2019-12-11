@@ -293,7 +293,7 @@ def snapshot_create(snapshot_id):
             info = domain.info()
             state = info[0]
             if state == 1:
-                snapshot_root.find("./memory").attrib['snapshot'] = 'yes'
+                snapshot_root.find("./memory").attrib['snapshot'] = 'internal'
             else:
                 snapshot_root.find("./memory").attrib['snapshot'] = 'no'
             snapshot_root.find("./name").text = snapshot_obj.instance_name
