@@ -27,6 +27,13 @@ class HostSerializer(serializers.ModelSerializer):
     disks = serializers.SerializerMethodField()
     networks = serializers.SerializerMethodField()
     last_task = serializers.SerializerMethodField()
+    network_names = serializers.SerializerMethodField()
+
+    def get_network_names(self, obj):
+        result = []
+        for i in obj.hostnetwork_set.filter(is_delete=False):
+            result.append(i.network_name)
+        return result
 
     def get_disks(self, obj):
         result = []
@@ -121,9 +128,10 @@ class HostSerializer(serializers.ModelSerializer):
             host_id = instance.id
             is_from_iso = data.get("is_from_iso")
             base_disk_name = data.get("base_disk_name")
+            network_names = data.get("network_names")
             iso_names = data.get("iso_names")
             init_disk_size_gb = data.get("init_disk_size_gb")
-            task = create_host.delay(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb)
+            task = create_host.delay(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb, network_names)
             instance.last_task_id = task.id
             instance.last_task_name = "创建虚拟机"
             instance.save()
@@ -132,7 +140,7 @@ class HostSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data:
+        if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data or 'network_names' in validated_data:
             def callback():
                 task = define_host.delay(instance.id)
                 instance.last_task_id = task.id

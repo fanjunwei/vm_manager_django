@@ -69,7 +69,7 @@ def define_host(host_id):
 
 
 @shared_task
-def create_host(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb):
+def create_host(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb, network_names):
     host = Host.objects.filter(id=host_id, is_delete=False).first()
     if not host:
         raise TaskError("not found host")
@@ -108,12 +108,12 @@ def create_host(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_
             host_cdrom.dev = dev
             host_cdrom.bus = 'ide'
             host_cdrom.save()
-
-    host_net = HostNetwork()
-    host_net.host_id = host_id
-    host_net.mac = new_mac()
-    host_net.network_name = "default"
-    host_net.save()
+    for net_name in network_names:
+        host_net = HostNetwork()
+        host_net.host_id = host_id
+        host_net.mac = new_mac()
+        host_net.network_name = net_name
+        host_net.save()
     define_host(host_id)
 
 
