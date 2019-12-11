@@ -16,7 +16,8 @@ from rest_framework.views import APIView
 from common.viewset import BaseViewSet
 from host_manager.models import Host, new_vnc_port, HostStorage, HOST_STORAGE_DEVICE_CDROM, HostSnapshot
 from host_manager.serializers import HostSerializer, SnapshotSerializer
-from host_manager.tasks import host_action, attach_disk, detach_disk, save_disk_to_base, snapshot_revert
+from host_manager.tasks import host_action, attach_disk, detach_disk, save_disk_to_base, snapshot_revert, \
+    snapshot_delete
 
 
 class HostViewSet(BaseViewSet):
@@ -247,6 +248,13 @@ class SnapshotViewSet(BaseViewSet):
         self.request.data['host'] = self.kwargs.get("host_id")
         self.request.data['instance_name'] = str(int(time.time()))
         return super(SnapshotViewSet, self).create(request, *args, **kwargs)
+
+    def perform_destroy(self, instance):
+        task = snapshot_delete.delay(instance.id)
+        host_instance = Host.objects.filter(id=instance.host_id).first()
+        host_instance.last_task_id = task.id
+        host_instance.last_task_name = "删除快照"
+        host_instance.save()
 
     def get_queryset(self):
         host_id = self.kwargs.get("host_id")

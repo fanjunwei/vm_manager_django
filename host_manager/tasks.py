@@ -334,3 +334,20 @@ def snapshot_revert(snapshot_id):
             raise TaskError("not found domain")
         snap = domain.snapshotLookupByName(snapshot_obj.instance_name)
         domain.revertToSnapshot(snap)
+
+
+@shared_task
+def snapshot_delete(snapshot_id):
+    snapshot_obj = HostSnapshot.objects.filter(id=snapshot_id).first()
+    if not snapshot_obj:
+        raise TaskError("not found snapshot")
+    host = snapshot_obj.host
+    with libvirt.open(settings.LIBVIRT_URI) as conn:
+        try:
+            domain = conn.lookupByUUIDString(host.instance_uuid)
+        except libvirt.libvirtError:
+            raise TaskError("not found domain")
+        snap = domain.snapshotLookupByName(snapshot_obj.instance_name)
+        snap.delete()
+    snapshot_obj.is_delete = True
+    snapshot_obj.save()
