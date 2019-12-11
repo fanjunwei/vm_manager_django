@@ -267,9 +267,11 @@ def save_disk_to_base(host_id, disk_id, name):
             is_running = False
         if is_running:
             domain.suspend()
-        shutil.copyfile(disk_obj.path, path)
-        if is_running:
-            domain.resume()
+        try:
+            shutil.copyfile(disk_obj.path, path)
+        finally:
+            if is_running:
+                domain.resume()
 
 
 @shared_task
@@ -288,6 +290,12 @@ def snapshot_create(snapshot_id):
             snapshot_disk_xml_path = os.path.join(settings.BASE_DIR, 'assets/xml_templete/snapshot/disk.xml')
             with open(snapshot_xml_path, 'r') as f:
                 snapshot_root = ET.fromstring(f.read())
+            info = domain.info()
+            state = info[0]
+            if state == 1:
+                snapshot_root.find("./memory").attrib['snapshot'] = 'yes'
+            else:
+                snapshot_root.find("./memory").attrib['snapshot'] = 'no'
             snapshot_root.find("./name").text = snapshot_obj.instance_name
             snapshot_root.find("./description").text = snapshot_obj.desc
             for storage in HostStorage.objects.filter(host=host, device=HOST_STORAGE_DEVICE_DISK, is_delete=False):
