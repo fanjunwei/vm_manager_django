@@ -12,7 +12,7 @@ from django.conf import settings
 
 from common.utils import new_mac
 from host_manager.models import Host, HostStorage, HOST_STORAGE_DEVICE_DISK, HOST_STORAGE_DEVICE_CDROM, HostNetwork, \
-    HostSnapshot
+    HostSnapshot, VncPorts
 
 
 class TaskError(Exception):
@@ -153,6 +153,7 @@ def host_action(host_id, action):
             host.is_delete = True
             host.delete_time = datetime.datetime.now()
             host.save()
+            VncPorts.objects.filter(value=host.vnc_port).delete()
 
         elif action == 'reboot':
             domain.reboot()
