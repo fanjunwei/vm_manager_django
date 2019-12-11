@@ -6,7 +6,9 @@ from django.conf import settings
 from django.db import transaction
 from rest_framework import serializers
 from xml.etree import ElementTree as ET
-from host_manager.models import Host, HostSnapshot
+
+from common.utils import new_mac
+from host_manager.models import Host, HostSnapshot, HostNetwork
 from host_manager.tasks import create_host, define_host, snapshot_create
 
 status_map = {
@@ -129,6 +131,7 @@ class HostSerializer(serializers.ModelSerializer):
             is_from_iso = data.get("is_from_iso")
             base_disk_name = data.get("base_disk_name")
             network_names = data.get("network_names")
+            network_names = [x for x in network_names if x]
             iso_names = data.get("iso_names")
             init_disk_size_gb = data.get("init_disk_size_gb")
             task = create_host.delay(host_id, is_from_iso, base_disk_name, iso_names, init_disk_size_gb, network_names)
@@ -140,6 +143,21 @@ class HostSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
+        if 'network_names' in validated_data:
+            network_names = validated_data.get("network_names")
+            network_names = [x for x in network_names if x]
+            HostNetwork.objects.filter(host_id=instance.id, is_delete=False).exclude(
+                network_name__in=network_names).update(is_delete=True)
+            for net_name in network_names:
+                host_net = HostNetwork.objects.filter(host_id=instance.id, network_name=net_name)
+                if not host_net:
+                    host_net = HostNetwork()
+                host_net.host_id = instance.id
+                if not host_net.mac:
+                    host_net.mac = new_mac()
+                host_net.network_name = net_name
+                host_net.is_delete = False
+                host_net.save()
         if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data or 'network_names' in validated_data:
             def callback():
                 task = define_host.delay(instance.id)
