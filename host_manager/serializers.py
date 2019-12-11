@@ -149,7 +149,7 @@ class HostSerializer(serializers.ModelSerializer):
             HostNetwork.objects.filter(host_id=instance.id, is_delete=False).exclude(
                 network_name__in=network_names).update(is_delete=True)
             for net_name in network_names:
-                host_net = HostNetwork.objects.filter(host_id=instance.id, network_name=net_name)
+                host_net = HostNetwork.objects.filter(host_id=instance.id, network_name=net_name).first()
                 if not host_net:
                     host_net = HostNetwork()
                 host_net.host_id = instance.id
