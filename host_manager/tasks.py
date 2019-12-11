@@ -142,6 +142,8 @@ def host_action(host_id, action):
                 domain.destroy()
         elif action == 'delete':
             if domain:
+                for snap in domain.listAllSnapshots():
+                    snap.delete()
                 info = domain.info()
                 state = info[0]
                 if state == 1:
