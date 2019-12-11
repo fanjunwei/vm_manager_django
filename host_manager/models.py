@@ -81,6 +81,8 @@ class HostSnapshot(BaseModel):
     desc = models.CharField(max_length=200, null=True, blank=True)
     parent_instance_name = models.CharField(max_length=100, null=True)
     state = models.CharField(max_length=20, null=True)
+    last_task_id = models.CharField(max_length=50, null=True)
+    last_task_name = models.CharField(max_length=100, null=True)
 
     class Meta:
         ordering = ['-create_time']

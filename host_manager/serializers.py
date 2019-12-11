@@ -155,6 +155,7 @@ class HostSerializer(serializers.ModelSerializer):
 
 class SnapshotSerializer(serializers.ModelSerializer):
     parent = serializers.SerializerMethodField()
+    last_task = serializers.SerializerMethodField()
 
     class Meta:
         model = HostSnapshot
@@ -164,6 +165,47 @@ class SnapshotSerializer(serializers.ModelSerializer):
             'modify_time': {'read_only': True},
             'delete_time': {'read_only': True},
         }
+
+    def get_last_task(self, obj):
+        """The tasks current state.
+
+        Possible values includes:
+
+            *PENDING*
+
+                The task is waiting for execution.
+
+            *STARTED*
+
+                The task has been started.
+
+            *RETRY*
+
+                The task is to be retried, possibly because of failure.
+
+            *FAILURE*
+
+                The task raised an exception, or has exceeded the retry limit.
+                The :attr:`result` attribute then contains the
+                exception raised by the task.
+
+            *SUCCESS*
+
+                The task executed successfully.  The :attr:`result` attribute
+                then contains the tasks return value.
+        """
+        last_task_id = obj.last_task_id
+        if last_task_id:
+            result = AsyncResult(last_task_id)
+            data = {
+                "state": result.state,
+                "name": obj.last_task_name
+            }
+            if result.state == 'SUCCESS':
+                return None
+            elif result.state == 'FAILURE':
+                data['result'] = str(result.result)
+            return data
 
     def get_parent(self, obj):
         if obj.parent_instance_name:
@@ -181,6 +223,9 @@ class SnapshotSerializer(serializers.ModelSerializer):
             host_instance.last_task_id = task.id
             host_instance.last_task_name = "创建快照"
             host_instance.save()
+            instance.last_task_id = task.id
+            instance.last_task_name = "创建快照"
+            instance.save()
 
         transaction.on_commit(callback)
         return instance

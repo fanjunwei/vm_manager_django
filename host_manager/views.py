@@ -255,6 +255,9 @@ class SnapshotViewSet(BaseViewSet):
         host_instance.last_task_id = task.id
         host_instance.last_task_name = "删除快照"
         host_instance.save()
+        instance.last_task_id = task.id
+        instance.last_task_name = "删除快照"
+        instance.save()
 
     def get_queryset(self):
         host_id = self.kwargs.get("host_id")
@@ -277,6 +280,9 @@ class SnapshotRevertView(APIView):
             host_instance.last_task_id = task.id
             host_instance.last_task_name = "恢复快照"
             host_instance.save()
+            snap_obj.last_task_id = task.id
+            snap_obj.last_task_name = "恢复快照"
+            snap_obj.save()
 
         transaction.on_commit(callback)
         return Response()
