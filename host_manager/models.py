@@ -83,4 +83,4 @@ class HostSnapshot(BaseModel):
     state = models.CharField(max_length=20, null=True)
 
     class Meta:
-        ordering = ['create_time']
+        ordering = ['-create_time']
