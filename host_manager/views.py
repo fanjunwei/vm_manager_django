@@ -128,6 +128,17 @@ class BaseDisksView(APIView):
         })
 
 
+class NetworksView(APIView):
+    def get(self, request, *args, **kwargs):
+        results = []
+
+        with libvirt.open(settings.LIBVIRT_URI) as conn:
+            for net in conn.listAllNetworks():
+                results.append(net.name())
+
+        return Response(data=results)
+
+
 class IsoView(APIView):
     def get(self, request, *args, **kwargs):
         path = settings.VM_ISO_DIR

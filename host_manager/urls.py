@@ -29,5 +29,6 @@ urlpatterns = [
     url(r'^host/(?P<host_id>[\w\-]+)/snapshot/(?P<pk>[\w\-]+)/revert/$', views.SnapshotRevertView.as_view()),
     url(r'^overview/$', views.OverviewView.as_view()),
     url(r'^base_disks/$', views.BaseDisksView.as_view()),
+    url(r'^networks/$', views.NetworksView.as_view()),
     url(r'^iso/$', views.IsoView.as_view()),
 ]
