@@ -143,8 +143,8 @@ class HostSerializer(serializers.ModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        if 'network_names' in validated_data:
-            network_names = validated_data.get("network_names")
+        if 'network_names' in self.initial_data:
+            network_names = self.initial_data.get("network_names")
             network_names = [x for x in network_names if x]
             HostNetwork.objects.filter(host_id=instance.id, is_delete=False).exclude(
                 network_name__in=network_names).update(is_delete=True)
@@ -158,7 +158,7 @@ class HostSerializer(serializers.ModelSerializer):
                 host_net.network_name = net_name
                 host_net.is_delete = False
                 host_net.save()
-        if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data or 'network_names' in validated_data:
+        if 'cpu_core' in validated_data or 'mem_size_kb' in validated_data or 'network_names' in self.initial_data:
             def callback():
                 task = define_host.delay(instance.id)
                 instance.last_task_id = task.id
