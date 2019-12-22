@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 import sys
 import os
 
+import yaml
+
 try:
     reload(sys)
     sys.setdefaultencoding('utf-8')
@@ -162,3 +164,12 @@ if not os.path.exists(VM_DATA_DIR):
     os.makedirs(VM_DATA_DIR)
 if not os.path.exists(VM_DB_DIR):
     os.makedirs(VM_DB_DIR)
+
+global_config = os.path.join(VM_BASE_DIR, 'config.yml')
+if os.path.exists(global_config):
+    with open(global_config, 'r') as f:
+        txt = f.read()
+    data = yaml.load(txt, Loader=yaml.SafeLoader)
+    for key, value in data.items():
+        if key.isupper():
+            globals()[key] = value

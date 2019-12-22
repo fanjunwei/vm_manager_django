@@ -10,3 +10,4 @@ celery==4.3.0
 django-celery-results==1.1.2
 jsonschema
 pycodestyle
+PyYaml
